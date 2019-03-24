@@ -4,4 +4,3 @@ project ("header")
 #include dir
 include_directories("../include")
 add_executable(header header.cpp)
-#target_link_libraries(header filterbank)

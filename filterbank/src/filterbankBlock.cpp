@@ -1,7 +1,7 @@
 #include "filterbankBlock.h"
 
 namespace fb {
-	FilterbankBlock::FilterbankBlock(uint64_t start, uint64_t length, const FilterbankFile* file) {
+	Asteria::FilterbankBlock::FilterbankBlock(uint64_t start, uint64_t length, const FilterbankFile* file) {
 		_start = start;
 		_length = length;
 		_filfile = file;
@@ -13,12 +13,12 @@ namespace fb {
 		_data = static_cast<float*>(calloc(sizeof(float), _raw_length);
 	}
 
-	FilterbankBlock::~FilterbankBlock() {
+	Asteria::FilterbankBlock::~FilterbankBlock() {
 		// Deallocate the data;
 		free(_data);
 	}
 
-	int FilterbankBlock::read_block(FILE* input, int nbits, float* block, int nread)
+	int Asteria::FilterbankBlock::read_block(FILE* input, int nbits, float* block, int nread)
 	{
 		int i, j, k, s1, s2, s3, s4, iread;
 		unsigned char* charblock;

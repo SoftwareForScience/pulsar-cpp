@@ -17,13 +17,10 @@ int Asteria::FilterbankFile::getChannelOffset(const FilterbankFile& other) {
 	return((int)(round(start_channel)));
 }
 
-FilterbankBlock * Asteria::FilterbankFile::readBlock(int start_sample, int length) {
-	FilterbankBlock* block = new FilterbankBlock(start_sample, length, *this);
-	read_block(_rawfile, _nbits, block->_data, length * _nchans * _nifs);
+Asteria::FilterbankBlock* Asteria::FilterbankFile::readBlock(int start_sample, int length) {
+	FilterbankBlock* block = new FilterbankBlock(start_sample, length, this);
+	block->read_block(_rawfile, _nbits, block->_data, length * _nchans * _nifs);
 	return block;
 }
 
-bool Asteria::FilterbankFile::eof()
-{
-	return feof(_rawfile);
-}
+bool Asteria::FilterbankFile::eof()	{ return feof(_rawfile); }
