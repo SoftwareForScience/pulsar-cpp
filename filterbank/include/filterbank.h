@@ -1,21 +1,33 @@
-#pragma once
+#ifndef FILTERBANK_H
+#define FILTERBANK_H
 
-namespace Asteria {
-	/* input and output files and logfile (filterbank.monitor) */
-	FILE* input, * output, * logfile;
-	char  inpfile[80], outfile[80];
+#include <map>
+#include <string>
+#include <vector>
+#include <header.h>
 
-	/* global variables describing the data */
-	#include "filterbankHeader.h"
-	double time_offset;
+const std::map<uint16_t, std::string> telescope_ids = {
+	{ 0, "Fake" }, { 1, "Arecibo" }, { 1, "Ooty" },
+	{ 3, "Nancay"}, { 4, "Parkes" },{ 5, "Jodrell"},
+	{ 6, "GBT" }, { 7, "GMRT"},	{ 8, "Effelsberg"}, 
+	{ 9, "ATA"}, { 10, "SRT"}, {11, "LOFAR"},
+	{ 12, "VLA"}, { 20, "CHIME"}, {21, "FAST"},
+	{64, "MeerKAT" }, {65, "KAT-7"}
+};
 
-	/* global variables describing the operating mode */
-	float start_time, final_time, clip_threshold;
+const std::map<uint16_t, std::string> machine_ids = {
+	{0,"FAKE"}, {1, "PSPM"}, {2, "WaPP"},
+	{3, "AOFTM"}, {4,"BCPM1"}, {5, "OOTY"},
+	{6, "SCAMP"}, {7, "SPIGOT"}, {11, "BG/P"},
+	{12, "PDEV"}, {20, "CHIME+PSR"}, {64, "KAT"},
+	{65, "KAT-DC2"}
+};
 
-	int obits, sumifs, headerless, headerfile, swapout, invert_band;
-	int compute_spectra, do_vanvleck, hanning, hamming, zerolagdump;
-	int headeronly;
-	char ifstream[8];
-	char flip_band;
-	unsigned char* gmrtzap;
-}
+
+class filterbank {
+public:
+	filterbank_header header;
+
+};
+
+#endif // !FILTERBANK_H
