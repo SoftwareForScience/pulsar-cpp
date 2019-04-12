@@ -8,5 +8,5 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
 
 include_directories("../include")
 
-add_executable(filterbank "./read_header.cpp" "./header.cpp")
+add_executable(filterbank "./filterbank.cpp" "./read_header.cpp")
 

@@ -37,7 +37,6 @@ public:
 
 	int nbeams = 0;
 	int ibeam = 0;
-
 private:
 	int hdrlen = 0;
 	int filelen = 0;

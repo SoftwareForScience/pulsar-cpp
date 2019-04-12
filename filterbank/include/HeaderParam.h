@@ -1,12 +1,31 @@
-#ifndef FILTERBANK_HEADER_PARAM_H
+#ifndef HEADERPARAM_H
+#define HEADERPARAM_H
 
-#include <string>
-
-class filterbank_header_param {
-public:
-	std::string key;
-	enum {STRING, INT, DOUBLE, CHAR} datatype;
-	union {char[80] s, int i, double d, char c } value;
+enum dataType
+{
+	INT,
+	STRING,
+	DOUBLE,
 };
-#endif // !FILTERBANK_HEADER_PARAM_H
 
+union headerValue {
+	int i;
+	char s[80]{'\0'};
+	double d;
+};
+
+struct header_param
+{
+	dataType type;
+	headerValue val;
+
+	header_param(){}
+
+	header_param(const dataType type) {
+		this->type = type;
+	}
+};
+
+
+
+#endif // !HEADERPARAM_H
