@@ -5,24 +5,10 @@
 #include <string>
 #include <map>
 #include <fstream>
+#include <list>
 #include "headerparam.h"
+#include "Eigen/Dense"
 
-const std::map<uint16_t, std::string> telescope_ids = {
-	{ 0, "Fake" }, { 1, "Arecibo" }, { 1, "Ooty" },
-	{ 3, "Nancay"}, { 4, "Parkes" },{ 5, "Jodrell"},
-	{ 6, "GBT" }, { 7, "GMRT"},	{ 8, "Effelsberg"},
-	{ 9, "ATA"}, { 10, "SRT"}, {11, "LOFAR"},
-	{ 12, "VLA"}, { 20, "CHIME"}, {21, "FAST"},
-	{64, "MeerKAT" }, {65, "KAT-7"}
-};
-
-const std::map<uint16_t, std::string> machine_ids = {
-	{0,"FAKE"}, {1, "PSPM"}, {2, "WaPP"},
-	{3, "AOFTM"}, {4,"BCPM1"}, {5, "OOTY"},
-	{6, "SCAMP"}, {7, "SPIGOT"}, {11, "BG/P"},
-	{12, "PDEV"}, {20, "CHIME+PSR"}, {64, "KAT"},
-	{65, "KAT-DC2"}
-};
 
 
 
@@ -35,37 +21,66 @@ public:
 		{"telescope_id", INT},
 		{"machine_id", INT},
 		{"data_type", INT},
-		{"rawdatafile", STRING},
-		{"source_name", STRING},
+		{"rawdatafile", STRING}, // name of the original data file
+		{"source_name", STRING}, // the name of the source being observed by the telescope
 		{"barycentric", INT},
 		{"pulsarcentric", INT},
-		{"az_start", DOUBLE},
-		{"za_start", DOUBLE},
-		{"src_raj", DOUBLE},
-		{"src_dej", DOUBLE},
-		{"tstart", DOUBLE},
-		{"tsamp", DOUBLE},
-		{"nbits", INT},
-		{"nsamples", INT},
-		{"fch1", DOUBLE},
-		{"foff", DOUBLE},
-		{"nchans", INT},
-		{"nifs", INT},
-		{"refdm", DOUBLE},
-		{"period", DOUBLE},
+		{"az_start", DOUBLE}, // telescope azimut at start of scan
+		{"za_start", DOUBLE}, // telescope zenith angle at start of scan
+		{"src_raj", DOUBLE}, // right ascension of source (hhmmss.s)
+		{"src_dej", DOUBLE}, // declination of source (ddmmss.s)
+		{"tstart", DOUBLE}, // time stamp of first sample
+		{"tsamp", DOUBLE}, // time interval between samples
+		{"nbits", INT}, // number of bits per time sample
+		{"nsamples", INT}, // number of time samples in the data file
+		{"fch1", DOUBLE}, // centre frequency of first filterbank channel
+		{"foff", DOUBLE}, // filterbank channel bandwith
+		{"nchans", INT}, // number of filterbank channels
+		{"nifs", INT}, // number of seperate if channels
+		{"refdm", DOUBLE}, // reference dispersion measure
+		{"period", DOUBLE}, // folding period (s)
 		{"nbeams", INT},
 		{"ibeam", INT}
 	};
 
+	unsigned int header_size = 0;
+	unsigned int data_size = 0;
+
+	bool read_header();
+	bool read_filterbank();
+
+	int setup_time(int start_sample, int end_sample);
+	int setup_frequencies(int startFreq, int endFreq);
+	int setup_channels(int startFreq, int endFreq);
+	
+	std::string telescope();
+	std::string backend();
+
+	std::list<double> timestamps;
+	std::list<double> frequencies;
+	Eigen::MatrixXd data;
+
 private:
 	unsigned int read_key_size(std::ifstream& f);
-	bool read_header(std::ifstream& f);
-	int read_int(std::ifstream& f);
-	double read_double(std::ifstream& f);
+	template <typename T>
+	T read_value(std::ifstream& f);
 	char* read_string(std::ifstream& f, int* len);
 
 	std::string filename;
-	std::ifstream ifs;
+	std::ifstream f;
+
+	unsigned int n_bytes = 0;
+	unsigned int file_size = 0;
+	double center_freq = 0.0;
+
+	unsigned int n_samples = 0;
+	unsigned int n_channels = 0;
+
+	static std::map<uint16_t, std::string> telescope_ids;
+	static std::map<uint16_t, std::string> machine_ids;
+
+
+
 };
 
 #endif // !FILTERBANK_H

@@ -5,7 +5,7 @@ enum dataType
 {
 	INT,
 	STRING,
-	DOUBLE,
+	DOUBLE
 };
 
 union headerValue {
@@ -19,7 +19,9 @@ struct header_param
 	dataType type;
 	headerValue val;
 
-	header_param(){}
+	header_param(){
+		this->type = INT;
+	}
 
 	header_param(const dataType type) {
 		this->type = type;

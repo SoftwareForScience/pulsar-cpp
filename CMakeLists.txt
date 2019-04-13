@@ -9,6 +9,8 @@ set(Asteria_VERSION_MINOR 1)
 
 #include dir
 add_subdirectory("filterbank")
+add_subdirectory("header")
+
 
 
 

@@ -3,10 +3,8 @@ set (CMAKE_CXX_STANDARD 11)
 
 project ("filterbank")
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
-
-
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /ZI")
+include_directories ($ENV{EIGEN3_INCLUDE_DIR})
 include_directories("../include")
 
-add_executable(filterbank "./filterbank.cpp" "./read_header.cpp")
-
+add_library(filterbank "./filterbank.cpp")
