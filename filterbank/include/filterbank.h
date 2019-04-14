@@ -5,16 +5,16 @@
 #include <string>
 #include <map>
 #include <fstream>
+#include <iostream>
 #include <list>
 #include "headerparam.h"
 #include "Eigen/Dense"
 
-
-
-
 class filterbank {
 public:
-	filterbank(std::string filename);
+	filterbank();
+	static filterbank* read_filterbank(std::string filename);
+	static filterbank* create_filterbank(std::string filename);
 
 	std::map<std::string, header_param> header
 	{
@@ -47,14 +47,13 @@ public:
 	unsigned int data_size = 0;
 
 	bool read_header();
-	bool read_filterbank();
+	bool read_data();
 
-	int setup_time(int start_sample, int end_sample);
-	int setup_frequencies(int startFreq, int endFreq);
-	int setup_channels(int startFreq, int endFreq);
+	void setup_time(unsigned int start_sample, unsigned int end_sample);
+	void setup_frequencies(unsigned int startchannel, unsigned int endchannel);
 	
-	std::string telescope();
-	std::string backend();
+	std::string telescope;
+	std::string backend;
 
 	std::list<double> timestamps;
 	std::list<double> frequencies;
@@ -78,8 +77,6 @@ private:
 
 	static std::map<uint16_t, std::string> telescope_ids;
 	static std::map<uint16_t, std::string> machine_ids;
-
-
 
 };
 

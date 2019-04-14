@@ -3,10 +3,22 @@
 
 int main(int argc, char* argv[])
 {
-	std::string filename = "C:\\Users\\Ronald\\source\\repos\\Asteria_Cpp\\data\\pspm8.fil";
+	std::vector<std::string> argList(argv, argv + argc);
+	if (argList.size() == 1) 
+		std::cout << "Please supply a filterbank file \n";
+	
+	std::string filename = argList[1];
+	filterbank* fb = nullptr;
 
 	//auto test = new filterbank_header(filename);
-	auto fb = new filterbank(filename);
+	try {
+		fb = filterbank::read_filterbank(filename);
+	}
+	catch(const char* msg){
+		std::cout << msg << "\n";
+		exit(1);
+	}
+
 
 	std::cout << "Data file                        : " << filename << "\n";
 	std::cout << "Header size (bytes)              : " << fb->header_size << "\n";
@@ -19,8 +31,8 @@ int main(int argc, char* argv[])
 	else
 		std::cout << "Data type                        : " << fb->header["data_type"].val.i << "(topocentric)\n";
 
-	std::cout << "Telescope                        : " << fb->telescope() << "\n";
-	std::cout << "Datataking Machine               : " << fb->backend() << "\n";
+	std::cout << "Telescope                        : " << fb->telescope << "\n";
+	std::cout << "Datataking Machine               : " << fb->backend << "\n";
 	std::cout << "Source Name                      : " << fb->header["source_name"].val.s << "\n";
 
 

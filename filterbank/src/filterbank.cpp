@@ -17,32 +17,39 @@ std::map<uint16_t, std::string> filterbank::machine_ids = {
 	{65, "KAT-DC2"}
 };
 
-filterbank::filterbank(std::string filename) {
+filterbank* filterbank::read_filterbank(std::string filename) {
+	filterbank* fb = new filterbank();
 
-	this->filename = filename;
-	f.open(this->filename, std::ifstream::in);
+	fb->filename = filename;
 
-	if (!read_header()) {
-		throw 1;
+	if (!fb->read_header()) {
+		throw "Invalid filterbank file";
 	}
 
-	n_samples = setup_time(false, false);
-	n_channels = setup_frequencies(false, false);
-	read_filterbank();
+	fb-> setup_time(false, false);
+	fb-> setup_frequencies(false, false);
+	fb-> read_data();
+	return fb;
 }
 
-std::string filterbank::telescope() {
-	return telescope_ids[header["telescope_id"].val.i];
+filterbank* filterbank::create_filterbank(std::string filename) {
+
+	std::ofstream file;
+	file.open(filename, std::ofstream::out || std::ofstream::trunc);
+	file.close();
+	filterbank* fb = new filterbank();
+	fb->filename = filename;
+	return fb;
 }
 
-std::string filterbank::backend() {
-	return machine_ids[header["machine_id"].val.i];
-}
+filterbank::filterbank() {}
 
 bool filterbank::read_header() {
+	f.open(filename, std::ifstream::in);
 	if (!f.is_open()) {
 		return false;
 	}
+
 
 	unsigned int keylen = read_key_size(f);
 	char* buffer = new char[keylen] { '\0' };
@@ -89,26 +96,31 @@ bool filterbank::read_header() {
 	file_size = unsigned int(f.tellg());
 	data_size = file_size - header_size;
 
-	//Move back to the original position to start reading the body;
-	f.seekg(header_size);
-
 	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
 
+	telescope = telescope_ids[header["telescope_id"].val.i];
+	backend = machine_ids[header["machine_id"].val.i];
+
+	f.close();
 	return true;
 }
 
-bool filterbank::read_filterbank() {
+bool filterbank::read_data() {
+	f.open(filename, std::ifstream::in);
 	if (!f.is_open()) {
 		return false;
 	}
 
+
+	f.seekg(header_size);
+
 	// Allocate a block of data
 	data.resize(n_channels, n_samples);
 
-	for (int channel = 0; channel < n_channels; channel++) {
-		for (int sample = 0; sample < n_samples; sample++) {
-			f.seekg((uint64_t)n_bytes * (uint64_t)channel, 1);
+	for (unsigned int channel = 0; channel < n_channels; channel++) {
+		for (unsigned int sample = 0; sample < n_samples; sample++) {
+			f.seekg((int64_t)n_bytes * (int64_t)channel, 1);
 			switch (n_bytes) {
 			case 1: {
 				data(channel, sample) = read_value<unsigned char>(f);
@@ -123,35 +135,35 @@ bool filterbank::read_filterbank() {
 				break;
 			}
 			}
-
 		}
 	}
+	
+	f.close();
+
 	return true;
 }
 
-int filterbank::setup_frequencies(int startFreq = 0, int endFreq = 0) {
+void filterbank::setup_frequencies(unsigned int startchannel = 0, unsigned int endchannel = 0) {
 	double channel_bandwith = header["foff"].val.d;
 	double start_frequency = header["fch1"].val.d;
 
-	double f_start = startFreq
-		? startFreq = int((startFreq - start_frequency) / channel_bandwith)
+	double f_start = startchannel
+		? ((startchannel - start_frequency) / channel_bandwith)
 		: 0;
 
-	double f_stop = endFreq
-		? ((endFreq - start_frequency) / channel_bandwith)
+	double f_stop = endchannel
+		? ((endchannel - start_frequency) / channel_bandwith)
 		: header["nchans"].val.i;
 
-	int n_frequencies = int(f_stop - f_start);
+	n_channels = int(f_stop - f_start);
 
 
-	for (int i = 0; i < n_frequencies; i++) {
+	for (int i = 0; i < n_channels; i++) {
 		frequencies.push_back(i * channel_bandwith + start_frequency);
 	}
-
-	return n_frequencies;
 }
 
-int  filterbank::setup_time(int start_sample = 0, int end_sample = 0) {
+void  filterbank::setup_time(unsigned int start_sample = 0, unsigned int end_sample = 0) {
 	double sample_interval = header["tsamp"].val.d;
 	double time_start = header["tstart"].val.d;
 
@@ -159,12 +171,12 @@ int  filterbank::setup_time(int start_sample = 0, int end_sample = 0) {
 		end_sample = data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
 	}
 
-	int n_samples = end_sample - start_sample;
+	n_samples = end_sample - start_sample;
 
-	for (int i = 0; i < n_samples; i++) {
+	for (unsigned int i = 0; i < n_samples; i++) {
 		timestamps.push_back(i * sample_interval / 24. / 60. / 60 + time_start);
 	}
-	return n_samples;
+	
 }
 
 unsigned int filterbank::read_key_size(std::ifstream& f) {
