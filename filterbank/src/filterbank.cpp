@@ -102,6 +102,11 @@ bool filterbank::read_header() {
 	telescope = telescope_ids[header["telescope_id"].val.i];
 	backend = machine_ids[header["machine_id"].val.i];
 
+	// if nsamples isn't set, get it from the data size
+	if (!header["nsamples"].val.i) {
+		header["nsamples"].val.i = data_size / n_bytes;
+	}
+
 	f.close();
 	return true;
 }

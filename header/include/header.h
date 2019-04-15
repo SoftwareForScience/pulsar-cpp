@@ -3,5 +3,6 @@
 
 #include <iostream>
 #include <vector>
+#include "filterbank.h"
 
 #endif // !HEADER_H
