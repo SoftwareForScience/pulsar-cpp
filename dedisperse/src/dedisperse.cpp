@@ -26,9 +26,9 @@ bool find_line(filterbank* fb, unsigned int start_sample, double max_delay, floa
 
 	unsigned int previous_index = start_sample;
 	bool found_line = false;
-	for (int f; f < channels; ++f) {
-		for (int i; i < len; ++i) {
-			if(fb->data(f, i))
+	for (int f = 0; f < channels; ++f) {
+		for (int i = 0; i < len; ++i) {
+			if (fb->data(f, i)) {};
 		}
 	}
 
@@ -42,7 +42,7 @@ float find_estimation_intensity(filterbank* fb, int highest_x)
 	float sum_intensities = 0.0;
 	//add all the samples to the priority queue
 	for (int i = 0; i < len; ++i) {
-		q.push(std::pair<float, int>(((float*) & (fb->data)[i]), i));
+		q.push(std::pair<float, int>(((float*) & (fb->data))[i], i));
 	}
 
 	for (int i = 0; i < highest_x; ++i) {
@@ -65,7 +65,7 @@ float find_dispersion_measure(filterbank* fb, double max_delay, float pulsar_int
 		float sample = ((float*) & (fb->data))[i];
 
 		if (sample > pulsar_intensity) {
-			start_sample_index = s;
+			start_sample_index = sample;
 			//line_coordinates = find_line(samples, len, max_delay, pulsar_intensity)
 		}
 	}

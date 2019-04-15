@@ -14,7 +14,7 @@ class filterbank {
 public:
 	filterbank();
 	static filterbank* read_filterbank(std::string filename);
-	static filterbank* create_filterbank(std::string filename);
+	void save_filterbank(std::string filename);
 
 	std::map<std::string, header_param> header
 	{

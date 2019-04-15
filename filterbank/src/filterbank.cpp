@@ -32,14 +32,13 @@ filterbank* filterbank::read_filterbank(std::string filename) {
 	return fb;
 }
 
-filterbank* filterbank::create_filterbank(std::string filename) {
+void filterbank::save_filterbank(std::string filename) {
 
 	std::ofstream file;
 	file.open(filename, std::ofstream::out || std::ofstream::trunc);
+
+
 	file.close();
-	filterbank* fb = new filterbank();
-	fb->filename = filename;
-	return fb;
 }
 
 filterbank::filterbank() {}
