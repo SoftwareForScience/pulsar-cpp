@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
 }
 
 
-float* dedisperse(filterbank* fb, int highest_x)
+float* dedisperse(filterbank& fb, int highest_x)
 {
 	return nullptr;
 }
@@ -32,17 +32,18 @@ bool find_line(filterbank* fb, unsigned int start_sample, double max_delay, floa
 		}
 	}
 
+	return found_line;
 }
 
-float find_estimation_intensity(filterbank* fb, int highest_x)
+float find_estimation_intensity(filterbank& fb, int highest_x)
 {
-	int len = fb->header["nsamples"].val.i;
+	int len = fb.header["nsamples"].val.i;
 	std::priority_queue<std::pair<float, int>> q;
 
 	float sum_intensities = 0.0;
 	//add all the samples to the priority queue
 	for (int i = 0; i < len; ++i) {
-		q.push(std::pair<float, int>(((float*) & (fb->data))[i], i));
+		q.push(std::pair<float, int>(((float*) & (fb.data))[i], i));
 	}
 
 	for (int i = 0; i < highest_x; ++i) {
@@ -55,17 +56,17 @@ float find_estimation_intensity(filterbank* fb, int highest_x)
 	return average_intensity;
 }
 
-float find_dispersion_measure(filterbank* fb, double max_delay, float pulsar_intensity)
+float find_dispersion_measure(filterbank& fb, double max_delay, float pulsar_intensity)
 {
-	int len = fb->header["nsamples"].val.i;
+	int len = fb.header["nsamples"].val.i;
 
 	int start_sample_index;
 
 	for (int i = 0; i < len; ++i) {
-		float sample = ((float*) & (fb->data))[i];
+		float sample = ((float*) & (fb.data))[i];
 
 		if (sample > pulsar_intensity) {
-			start_sample_index = sample;
+			start_sample_index = i;
 			//line_coordinates = find_line(samples, len, max_delay, pulsar_intensity)
 		}
 	}

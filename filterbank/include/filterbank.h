@@ -13,8 +13,8 @@
 class filterbank {
 public:
 	filterbank();
-	static filterbank* read_filterbank(std::string filename);
-	void save_filterbank(std::string filename);
+	static filterbank read_filterbank(std::string filename);
+	void save_filterbank();
 
 	std::map<std::string, header_param> header
 	{
@@ -45,39 +45,43 @@ public:
 
 	unsigned int header_size = 0;
 	unsigned int data_size = 0;
+	unsigned int n_channels = 0;
 
 	bool read_header();
 	bool read_data();
 
 	void setup_time(unsigned int start_sample, unsigned int end_sample);
 	void setup_frequencies(unsigned int startchannel, unsigned int endchannel);
-	
+
 	std::string telescope;
 	std::string backend;
 
 	std::list<double> timestamps;
 	std::list<double> frequencies;
 	Eigen::MatrixXd data;
+	std::string filename;
 
 private:
-	unsigned int read_key_size(std::ifstream& f);
-	template <typename T>
-	T read_value(std::ifstream& f);
-	char* read_string(std::ifstream& f, int* len);
-
-	std::string filename;
 	std::ifstream f;
 
 	unsigned int n_bytes = 0;
 	unsigned int file_size = 0;
 	double center_freq = 0.0;
 
-	unsigned int n_samples = 0;
-	unsigned int n_channels = 0;
+
 
 	static std::map<uint16_t, std::string> telescope_ids;
 	static std::map<uint16_t, std::string> machine_ids;
 
+	template <typename T>
+	T read_value(std::ifstream& f);
+
+	unsigned int read_key_size(std::ifstream& f);
+	char* read_string(std::ifstream& f, int* len);
+
+	template <typename T>
+	void write_value(std::ofstream& f, std::string key, T value);
+	void write_string(std::ofstream& f, char* string );
 };
 
 #endif // !FILTERBANK_H

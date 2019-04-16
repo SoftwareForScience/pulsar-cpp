@@ -17,26 +17,51 @@ std::map<uint16_t, std::string> filterbank::machine_ids = {
 	{65, "KAT-DC2"}
 };
 
-filterbank* filterbank::read_filterbank(std::string filename) {
-	filterbank* fb = new filterbank();
+filterbank filterbank::read_filterbank(std::string filename) {
+	filterbank fb;
 
-	fb->filename = filename;
+	fb.filename = filename;
 
-	if (!fb->read_header()) {
+	if (!fb.read_header()) {
 		throw "Invalid filterbank file";
 	}
 
-	fb-> setup_time(false, false);
-	fb-> setup_frequencies(false, false);
-	fb-> read_data();
+	fb.setup_time(false, false);
+	fb.setup_frequencies(false, false);
+	fb.read_data();
 	return fb;
 }
 
-void filterbank::save_filterbank(std::string filename) {
+void filterbank::save_filterbank() {
+	std::ofstream file(filename);
+	if(!file.is_open())
+		std::cout << "Failed to write to file \n";
 
-	std::ofstream file;
-	file.open(filename, std::ofstream::out || std::ofstream::trunc);
+	write_string(file, "HEADER_START");
+	for each (auto param in header)
+	{
+		switch (param.second.type) {
+		case INT: {
+			write_value(file, param.first, param.second.val.i);
+			break;
+		}
+		case DOUBLE: {
+			write_value(file, param.first, param.second.val.d);
+			break;
+		}
+		case STRING: {
+			write_value(file, param.first, param.second.val.s);
+			break;
+		}
+		}
+	}
+	write_string(file, "HEADER_END");
 
+	for(unsigned int channel = 0; channel < n_channels; ++channel){
+		for (unsigned int sample = 0; sample < header["nsamples"].val.i / n_channels; ++sample) {
+		   write_value(file, "", data(channel, sample));
+		}
+	}
 
 	file.close();
 }
@@ -48,7 +73,6 @@ bool filterbank::read_header() {
 	if (!f.is_open()) {
 		return false;
 	}
-
 
 	unsigned int keylen = read_key_size(f);
 	char* buffer = new char[keylen] { '\0' };
@@ -120,10 +144,10 @@ bool filterbank::read_data() {
 	f.seekg(header_size);
 
 	// Allocate a block of data
-	data.resize(n_channels, n_samples);
+	data.resize(n_channels, header["nsamples"].val.i);
 
 	for (unsigned int channel = 0; channel < n_channels; channel++) {
-		for (unsigned int sample = 0; sample < n_samples; sample++) {
+		for (unsigned int sample = 0; sample < header["nsamples"].val.i; sample++) {
 			f.seekg((int64_t)n_bytes * (int64_t)channel, 1);
 			switch (n_bytes) {
 			case 1: {
@@ -162,7 +186,7 @@ void filterbank::setup_frequencies(unsigned int startchannel = 0, unsigned int e
 	n_channels = int(f_stop - f_start);
 
 
-	for (int i = 0; i < n_channels; i++) {
+	for (unsigned int i = 0; i < n_channels; i++) {
 		frequencies.push_back(i * channel_bandwith + start_frequency);
 	}
 }
@@ -175,7 +199,7 @@ void  filterbank::setup_time(unsigned int start_sample = 0, unsigned int end_sam
 		end_sample = data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
 	}
 
-	n_samples = end_sample - start_sample;
+	int n_samples = end_sample - start_sample;
 
 	for (unsigned int i = 0; i < n_samples; i++) {
 		timestamps.push_back(i * sample_interval / 24. / 60. / 60 + time_start);
@@ -189,12 +213,20 @@ unsigned int filterbank::read_key_size(std::ifstream& f) {
 	return keylen;
 }
 
-char* filterbank::read_string(std::ifstream & f, int* len) {
+char* filterbank::read_string(std::ifstream& f, int* len) {
 	unsigned int strlen;
 	f.read(reinterpret_cast<char*>(&strlen), sizeof(strlen));
 	char* buffer = new char[strlen + 1]{ '\0' };
 	f.read(buffer, sizeof(char) * strlen);
 	return buffer;
+}
+
+void filterbank::write_string(std::ofstream& f, char* string) {
+	int len = strlen(string);
+	//Write the length of our string
+	f.write(reinterpret_cast<char*>(&len), sizeof(int));
+	//then write the actual string
+	f.write(string, len);
 }
 
 template <typename T >
@@ -203,4 +235,17 @@ T filterbank::read_value(std::ifstream & f) {
 	f.read(reinterpret_cast<char*>(&value), sizeof(value));
 	return value;
 }
+
+template <typename T>
+void filterbank::write_value(std::ofstream& f, std::string key, T value) {
+	//If there's a key, associated with the value(eg: header parameters) write the key
+	if (key.compare("")) {
+		write_string(f, (char*) key.c_str());
+	}
+
+	
+	char* val = reinterpret_cast<char*>(&value);
+	f.write(val, sizeof(T));
+}
+
 

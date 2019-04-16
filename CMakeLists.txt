@@ -8,8 +8,9 @@ set(Asteria_VERSION_MAJOR 0)
 set(Asteria_VERSION_MINOR 1)
 
 #include dir
-add_subdirectory("dedisperse")
 add_subdirectory("asteria")
+add_subdirectory("decimate")
+add_subdirectory("dedisperse")
 add_subdirectory("filterbank")
 add_subdirectory("header")
 
