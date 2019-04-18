@@ -10,6 +10,7 @@ include_directories("../../asteria/include")
 
 include_directories ($ENV{EIGEN3_INCLUDE_DIR})
 
+
 add_executable(decimate "./decimate.cpp")
 target_link_libraries(decimate filterbank)
 target_link_libraries(decimate asteria)

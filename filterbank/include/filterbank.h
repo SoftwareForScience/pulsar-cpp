@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iostream>
 #include <list>
+#include <ctime>
+#include <cstdio>
 #include "headerparam.h"
 #include "Eigen/Dense"
 
@@ -46,6 +48,9 @@ public:
 	unsigned int header_size = 0;
 	unsigned int data_size = 0;
 	unsigned int n_channels = 0;
+	unsigned int n_channels_offset = 0;
+	unsigned int n_samples_c = 0;
+
 
 	bool read_header();
 	bool read_data();
@@ -62,7 +67,7 @@ public:
 	std::string filename;
 
 private:
-	std::ifstream f;
+	FILE* f;
 
 	unsigned int n_bytes = 0;
 	unsigned int file_size = 0;
@@ -74,14 +79,14 @@ private:
 	static std::map<uint16_t, std::string> machine_ids;
 
 	template <typename T>
-	T read_value(std::ifstream& f);
+	T read_value();
 
-	unsigned int read_key_size(std::ifstream& f);
-	char* read_string(std::ifstream& f, int* len);
+	unsigned int read_key_size();
+	char* read_string(unsigned int& len);
 
 	template <typename T>
-	void write_value(std::ofstream& f, std::string key, T value);
-	void write_string(std::ofstream& f, char* string );
+	void write_value(std::string key, T value);
+	void write_string(char* string );
 };
 
 #endif // !FILTERBANK_H

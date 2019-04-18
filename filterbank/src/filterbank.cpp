@@ -19,92 +19,144 @@ std::map<uint16_t, std::string> filterbank::machine_ids = {
 
 filterbank filterbank::read_filterbank(std::string filename) {
 	filterbank fb;
+	clock_t time_req = clock();
 
 	fb.filename = filename;
+
+	fb.f = fopen(filename.c_str(), "r");
 
 	if (!fb.read_header()) {
 		throw "Invalid filterbank file";
 	}
 
 	fb.setup_time(false, false);
+	time_req = clock() - time_req;
+	std::cout << "Time spent setting time: " << time_req / CLOCKS_PER_SEC << " seconds\n";
+
 	fb.setup_frequencies(false, false);
+	time_req = clock() - time_req;
+	std::cout << "Time spent setting up channels: " << time_req / CLOCKS_PER_SEC << " seconds\n";
+
 	fb.read_data();
+	time_req = clock() - time_req;
+	std::cout << "Time spent reading data: " << time_req / CLOCKS_PER_SEC << " seconds\n";
+
+	fclose(fb.f);
+
 	return fb;
 }
 
 void filterbank::save_filterbank() {
-	std::ofstream file(filename);
-	if(!file.is_open())
+	f = fopen(filename.c_str(), "w");
+
+	if (f == NULL)
 		std::cout << "Failed to write to file \n";
 
-	write_string(file, "HEADER_START");
+	write_string("HEADER_START");
 	for each (auto param in header)
 	{
 		switch (param.second.type) {
 		case INT: {
-			write_value(file, param.first, param.second.val.i);
+			write_value(param.first, param.second.val.i);
 			break;
 		}
 		case DOUBLE: {
-			write_value(file, param.first, param.second.val.d);
+			write_value(param.first, param.second.val.d);
 			break;
 		}
 		case STRING: {
-			write_value(file, param.first, param.second.val.s);
+			write_value(param.first, param.second.val.s);
 			break;
 		}
 		}
 	}
-	write_string(file, "HEADER_END");
+	write_string("HEADER_END");
 
-	for(unsigned int channel = 0; channel < n_channels; ++channel){
-		for (unsigned int sample = 0; sample < header["nsamples"].val.i / n_channels; ++sample) {
-		   write_value(file, "", data(channel, sample));
+
+	for (unsigned int channel = 0; channel < n_channels ; ++channel) {
+		switch (n_bytes) {
+		case 1: {
+			char* datac = new char[n_samples_c];
+			for (unsigned int i = 0; i < n_samples_c; i++) {
+				datac[i] = data(channel, i);
+			}
+
+			fwrite(datac, sizeof(char), n_samples_c, f);
+
+			
+			break;
+		}
+		case 2: {
+			unsigned short* datas = new unsigned short[n_samples_c];
+
+			for (unsigned int i = 0; i < n_samples_c; i++) {
+				datas[i]= data(channel, i) ;
+			}			
+			
+			fwrite(reinterpret_cast<char*>(datas), sizeof(unsigned short), n_samples_c, f);
+			
+			break;
+		}
+		case 4: {
+			float* datac = new float[n_samples_c];
+
+			for (unsigned int i = 0; i < n_samples_c; i++) {
+				datac[i] = data(channel, i);
+			}
+
+			fwrite(reinterpret_cast<char*>(datac), sizeof(float), n_samples_c, f);
+			break;
+		}
 		}
 	}
 
-	file.close();
+	fclose(f);
 }
 
-filterbank::filterbank() {}
+filterbank::filterbank() {
+	f = NULL;
+}
 
 bool filterbank::read_header() {
-	f.open(filename, std::ifstream::in);
-	if (!f.is_open()) {
+	if (f == NULL) {
 		return false;
 	}
 
-	unsigned int keylen = read_key_size(f);
-	char* buffer = new char[keylen] { '\0' };
+	//unsigned int keylen = read_key_size();
+	unsigned int keylen;
+	char* buffer = read_string(keylen);
+	const std::string initial(buffer);
 
-	f.read(buffer, sizeof(char) * keylen);
-	if (!strcmp(buffer, "HEADER_START")) {
+	// char* buffer = new char[keylen] { '\0' };
+	// f.read(buffer, sizeof(char) * keylen);
+	
+	if (initial.compare("HEADER_START")) {
 		// if this isn't present, the file is not a valid filterbank file.
 		return false;
 	}
 
 	while (true) {
-		keylen = read_key_size(f);
-		buffer = new char[keylen + 1]{ '\0' };
-		f.read(buffer, sizeof(char) * keylen);
-
-		if (!strcmp(buffer, "HEADER_END\0")) {
+		keylen = 0;
+		buffer = read_string(keylen);
+		const std::string token(buffer);
+		// buffer = new char[keylen + 1]{ '\0' };
+		// f.read(buffer, sizeof(char) * keylen);
+		if(!token.compare("HEADER_END")){
 			break;
 		}
-		const std::string token(buffer);
 
 		switch (header[token].type) {
 		case INT: {
-			header[token].val.i = read_value<int>(f);
+			header[token].val.i = read_value<int>();
 			break;
 		}
 		case DOUBLE: {
-			header[token].val.d = read_value<double>(f);
+			header[token].val.d = read_value<double>();
 			break;
 		}
 		case STRING: {
-			int len;
-			auto value = read_string(f, &len);
+			unsigned int len;
+			auto value = read_string(len);
 			strncpy_s(header[token].val.s, value, len);
 			break;
 		}
@@ -113,10 +165,11 @@ bool filterbank::read_header() {
 	}
 
 	// get size of the header by getting the current position;
-	header_size = unsigned int(f.tellg());
+	header_size = unsigned int(ftell(f));
 	// get the size of the file by looking for the end, then getting the current position;
-	f.seekg(0, f._Seekend);
-	file_size = unsigned int(f.tellg());
+	fseek(f, 0, SEEK_END);
+	
+	file_size = unsigned int(ftell(f));
 	data_size = file_size - header_size;
 
 	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
@@ -130,43 +183,51 @@ bool filterbank::read_header() {
 		header["nsamples"].val.i = data_size / n_bytes;
 	}
 
-	f.close();
 	return true;
 }
 
 bool filterbank::read_data() {
-	f.open(filename, std::ifstream::in);
-	if (!f.is_open()) {
+	if (f == NULL)
 		return false;
-	}
-
-
-	f.seekg(header_size);
+	fseek(f, header_size, SEEK_SET);
 
 	// Allocate a block of data
 	data.resize(n_channels, header["nsamples"].val.i);
+	n_samples_c = header["nsamples"].val.i / header["nchans"].val.i;
+	
+	//if we've got an offset on the start, seek N bytes
+	fseek(f, n_channels_offset * n_samples_c * n_bytes, SEEK_CUR);
 
-	for (unsigned int channel = 0; channel < n_channels; channel++) {
-		for (unsigned int sample = 0; sample < header["nsamples"].val.i; sample++) {
-			f.seekg((int64_t)n_bytes * (int64_t)channel, 1);
-			switch (n_bytes) {
-			case 1: {
-				data(channel, sample) = read_value<unsigned char>(f);
-				break;
+	for (int channel = 0; channel < n_channels; channel++) {
+		switch (n_bytes) {
+		case 1: {
+			char* datac = new char[n_samples_c];
+			fread(datac, sizeof(char), n_samples_c, f);
+
+			for (unsigned int i = 0; i< n_samples_c; i++) {
+				data(channel, i) = datac[i];
 			}
-			case 2: {
-				data(channel, sample) = read_value<unsigned short>(f);
-				break;
+			break;
+		}
+		case 2: {
+			unsigned short* datac = new unsigned short[n_samples_c];
+			fread(datac, sizeof(unsigned short), n_samples_c, f);
+
+			for (unsigned int i = 0; i < n_samples_c; i++) {
+				data(channel, i) = datac[i];
+			}			break;
+		}
+		case 4: {
+			float* datac = new float[n_samples_c];
+			fread(datac, sizeof(float), n_samples_c, f);
+
+			for (unsigned int i = 0; i < n_samples_c; i++) {
+				data(channel, i) = datac[i];
 			}
-			case 4: {
-				data(channel, sample) = read_value<float>(f);
-				break;
-			}
-			}
+			break;
+		}
 		}
 	}
-	
-	f.close();
 
 	return true;
 }
@@ -185,6 +246,9 @@ void filterbank::setup_frequencies(unsigned int startchannel = 0, unsigned int e
 
 	n_channels = int(f_stop - f_start);
 
+	if (startchannel != 0) {
+		n_channels_offset = startchannel;
+	}
 
 	for (unsigned int i = 0; i < n_channels; i++) {
 		frequencies.push_back(i * channel_bandwith + start_frequency);
@@ -201,51 +265,48 @@ void  filterbank::setup_time(unsigned int start_sample = 0, unsigned int end_sam
 
 	int n_samples = end_sample - start_sample;
 
-	for (unsigned int i = 0; i < n_samples; i++) {
+	for (int i = 0; i < n_samples; i++) {
 		timestamps.push_back(i * sample_interval / 24. / 60. / 60 + time_start);
 	}
-	
+
 }
 
-unsigned int filterbank::read_key_size(std::ifstream& f) {
+unsigned int filterbank::read_key_size() {
 	unsigned int keylen;
-	f.read(reinterpret_cast<char*>(&keylen), sizeof(keylen));
+	fread(&keylen, sizeof(keylen), 1, f);
 	return keylen;
 }
 
-char* filterbank::read_string(std::ifstream& f, int* len) {
-	unsigned int strlen;
-	f.read(reinterpret_cast<char*>(&strlen), sizeof(strlen));
-	char* buffer = new char[strlen + 1]{ '\0' };
-	f.read(buffer, sizeof(char) * strlen);
+char* filterbank::read_string(unsigned int& len) {
+	int strlen = 0;
+	fread(&strlen, sizeof(uint32_t), 1, f);
+	char* buffer = new char[strlen + 1]{ '\0' };	
+	fread(buffer, sizeof(char), strlen, f);
 	return buffer;
 }
 
-void filterbank::write_string(std::ofstream& f, char* string) {
+void filterbank::write_string(char* string) {
 	int len = strlen(string);
 	//Write the length of our string
-	f.write(reinterpret_cast<char*>(&len), sizeof(int));
+	fwrite(&len, sizeof(int), 1, f);
 	//then write the actual string
-	f.write(string, len);
+	fwrite(string, sizeof(char), len, f);
 }
 
 template <typename T >
-T filterbank::read_value(std::ifstream & f) {
+T filterbank::read_value() {
 	T value;
-	f.read(reinterpret_cast<char*>(&value), sizeof(value));
+	fread(&value, sizeof(T), 1, f);
 	return value;
 }
 
 template <typename T>
-void filterbank::write_value(std::ofstream& f, std::string key, T value) {
+void filterbank::write_value(std::string key, T value) {
 	//If there's a key, associated with the value(eg: header parameters) write the key
 	if (key.compare("")) {
-		write_string(f, (char*) key.c_str());
+		write_string((char*)key.c_str());
 	}
-
-	
-	char* val = reinterpret_cast<char*>(&value);
-	f.write(val, sizeof(T));
+	fwrite(&value, sizeof(T), 1, f);
 }
 
 

@@ -10,4 +10,5 @@ include_directories("../../filterbank/include")
 include_directories ($ENV{EIGEN3_INCLUDE_DIR})
 
 add_executable(dedisperse "./dedisperse.cpp")
+
 target_link_libraries(dedisperse filterbank)

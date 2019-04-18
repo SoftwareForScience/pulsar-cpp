@@ -21,13 +21,10 @@ float* dedisperse(filterbank& fb, int highest_x)
 bool find_line(filterbank* fb, unsigned int start_sample, double max_delay, float pulsar_intensity)
 {
 	
-	int channels = fb->header["nchans"].val.i;
-	int len = fb->header["nsamples"].val.i/channels;
-
 	unsigned int previous_index = start_sample;
 	bool found_line = false;
-	for (int f = 0; f < channels; ++f) {
-		for (int i = 0; i < len; ++i) {
+	for (int f = 0; f < fb->n_channels; ++f) {
+		for (int i = 0; i < fb->n_samples_c; ++i) {
 			if (fb->data(f, i)) {};
 		}
 	}
@@ -58,11 +55,11 @@ float find_estimation_intensity(filterbank& fb, int highest_x)
 
 float find_dispersion_measure(filterbank& fb, double max_delay, float pulsar_intensity)
 {
-	int len = fb.header["nsamples"].val.i;
+	//int len = fb.header["nsamples"].val.i;
 
 	int start_sample_index;
 
-	for (int i = 0; i < len; ++i) {
+	for (int i = 0; i < fb.n_samples_c; ++i) {
 		float sample = ((float*) & (fb.data))[i];
 
 		if (sample > pulsar_intensity) {
