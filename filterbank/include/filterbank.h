@@ -47,11 +47,15 @@ public:
 
 	unsigned int header_size = 0;
 	unsigned int data_size = 0;
+	unsigned int n_samples = 0;
 	unsigned int n_channels = 0;
 	unsigned int n_channels_offset = 0;
+	unsigned int n_ifs = 0;
 
 	bool read_header();
-	bool read_data();
+	bool read_data(unsigned int naddt);
+	int read_block(int nbits, float* block, int nread);
+
 
 	void setup_time(unsigned int start_sample, unsigned int end_sample);
 	void setup_frequencies(unsigned int startchannel, unsigned int endchannel);
@@ -78,7 +82,7 @@ private:
 	T read_value();
 
 	unsigned int read_key_size();
-	char* read_string();
+	char* read_string(int& keylen);
 
 	template <typename T>
 	void write_value(std::string key, T value);

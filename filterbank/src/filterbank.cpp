@@ -37,7 +37,7 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	time_req = clock() - time_req;
 	std::cout << "Time spent setting up channels: " << time_req / CLOCKS_PER_SEC << " seconds\n";
 
-	fb.read_data();
+	fb.read_data(fb.n_samples);
 	time_req = clock() - time_req;
 	std::cout << "Time spent reading data: " << time_req / CLOCKS_PER_SEC << " seconds\n";
 
@@ -73,7 +73,7 @@ void filterbank::save_filterbank() {
 	write_string("HEADER_END");
 
 
-	for (unsigned int sample = 0; sample < header["nsamp"].val.i ; ++sample) {
+	for (unsigned int sample = 0; sample < header["nsamp"].val.i; ++sample) {
 		switch (n_bytes) {
 		case 1: {
 			char* datac = new char[n_channels];
@@ -120,24 +120,25 @@ bool filterbank::read_header() {
 		return false;
 	}
 
-	//unsigned int keylen = read_key_size();
-	char* buffer = read_string();
+	int keylen = 0;
+	char* buffer = read_string(keylen);
 	const std::string initial(buffer);
 
 	// char* buffer = new char[keylen] { '\0' };
 	// f.read(buffer, sizeof(char) * keylen);
-	
+
 	if (initial.compare("HEADER_START")) {
 		// if this isn't present, the file is not a valid filterbank file.
 		return false;
 	}
 
 	while (true) {
-		buffer = read_string();
+		int keylen = 0;
+		buffer = read_string(keylen);
 		const std::string token(buffer);
 		// buffer = new char[keylen + 1]{ '\0' };
 		// f.read(buffer, sizeof(char) * keylen);
-		if(!token.compare("HEADER_END")){
+		if (!token.compare("HEADER_END")) {
 			break;
 		}
 
@@ -151,8 +152,9 @@ bool filterbank::read_header() {
 			break;
 		}
 		case STRING: {
-			auto value = read_string();
-			strncpy_s(header[token].val.s, value, strlen(value));
+			int keylen;
+			auto value = read_string(keylen);
+			strncpy_s(header[token].val.s, value, keylen);
 			break;
 		}
 		};
@@ -163,14 +165,14 @@ bool filterbank::read_header() {
 	header_size = unsigned int(ftell(f));
 	// get the size of the file by looking for the end, then getting the current position;
 	fseek(f, 0, SEEK_END);
-	
+
 	file_size = unsigned int(ftell(f));
 	data_size = file_size - header_size;
 	n_channels = header["nchans"].val.i;
-
-	center_freq = (header["fch1"].val.d +  n_channels * header["foff"].val.d / 2.0);
+	n_ifs = header["nifs"].val.i;
+	center_freq = (header["fch1"].val.d + n_channels * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
-	
+
 	telescope = telescope_ids[header["telescope_id"].val.i];
 	backend = machine_ids[header["machine_id"].val.i];
 
@@ -182,50 +184,95 @@ bool filterbank::read_header() {
 	return true;
 }
 
-bool filterbank::read_data() {
+bool filterbank::read_data(unsigned int naddt) {
 	if (f == NULL)
 		return false;
 	fseek(f, header_size, SEEK_SET);
 
 	// Allocate a block of data
-	data.resize(header["nsamples"].val.i, n_channels);
-	
+	data.resize(n_samples, n_channels);
+
 	//if we've got an offset on the start, seek N bytes
 	fseek(f, n_channels_offset * n_channels * n_bytes, SEEK_CUR);
 
-	for (int sample = 0; sample < header["nsamples"].val.i ; sample++) {
-		switch (n_bytes) {
-		case 1: {
-			char* datac = new char[n_channels];
-			fread(datac, sizeof(char), n_channels, f);
-
-			for (unsigned int i = 0; i< n_channels; i++) {
-				data(sample, i) = datac[i];
-			}
-			break;
-		}
-		case 2: {
-			unsigned short* datac = new unsigned short[n_channels];
-			fread(reinterpret_cast<char*>(datac), sizeof(unsigned short), n_channels, f);
-
-			for (unsigned int i = 0; i < n_channels; i++) {
-				data(sample, i) = datac[i];
-			}			break;
-		}
-		case 4: {
-			float* datac = new float[n_channels] {0};
-			fread(reinterpret_cast<char*>(datac), sizeof(float), n_channels, f);
-
-			for (unsigned int i = 0; i < n_channels; i++) {
-				data(sample, i) = datac[i];
-				std::cout << "index:\t" << i <<"\tdata: " << datac[i] << "\n";
-			}
-			break;
-		}
-		}
-	}
+	// Get num samples per block
+	int nsblck = n_channels * n_ifs * naddt;
+	int n_samples;
+	do {
+		float* fblock = new float[nsblck];
+		n_samples = read_block(header["nbits"].val.i, fblock, nsblck);
+		
+	} while (n_samples > 0);
 
 	return true;
+}
+
+int filterbank::read_block(int nbits, float* block, int nread) {
+	int samples_read;
+	unsigned char* charblock = nullptr;
+	unsigned short* shortblock = nullptr;
+	int sample = 0;
+
+	/* decide how to read the data based on the number of bits per sample */
+	switch (nbits) {
+	case 1:	/* read n/8 bytes into character block containing n 1-bit pairs */
+		charblock = new unsigned char[nread / 8];
+		samples_read = fread(charblock, 1, nread, f);
+		for (int i = 0; i < samples_read; i++) {
+			for (int j = 0; j < 8; j++) {
+				block[sample++] = charblock[i] & 1;
+				charblock[i] >>= 1;
+			}
+		}
+		samples_read = sample;
+		break;
+
+	case 2:	/* read n/4 bytes into character block containing n 2-bit pairs */
+		charblock = new unsigned char[nread / 4];
+		samples_read = fread(charblock, 1, nread / 4, f);
+
+		for (int i = 0; i < samples_read; i++) {
+			block[sample++] = charblock[i] & 3;
+			block[sample++] = charblock[i] & 12;
+			block[sample++] = charblock[i] & 48;
+			block[sample++] = charblock[i] & 192;
+		}
+		samples_read *= 4;
+
+	case 4:	/* read n/2 bytes into character block containing n 4-bit pairs */
+		charblock = new unsigned char[nread / 2];
+		samples_read = fread(charblock, 1, nread / 2, f);
+		for (int i = 0; i < samples_read; i++) {
+			block[sample++] = charblock[i] & 15;
+			block[sample++] = (charblock[i] & 240) >> 4;
+		}
+		samples_read *= 2;
+		break;
+
+	case 8: /* read n bytes into character block containing n 1-byte numbers */
+		charblock = new unsigned char[nread];
+		samples_read = fread(charblock, 1, nread, f);
+		for (int i = 0; i < samples_read; i++) {
+			block[i] = (float)charblock[i];
+		}
+		break;
+
+	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
+		shortblock = new unsigned short[nread * 2];
+		samples_read = fread(shortblock, 2, nread, f);
+		for (int i = 0; i < samples_read; i++) {
+			block[i] = (float)shortblock[i];
+		}
+		break;
+	case 32:
+		samples_read = fread(block, 4, nread, f);
+		break;
+	}
+
+	delete[] charblock;
+	delete[] shortblock;
+
+	return samples_read;
 }
 
 void filterbank::setup_frequencies(unsigned int startchannel = 0, unsigned int endchannel = 0) {
@@ -256,10 +303,10 @@ void  filterbank::setup_time(unsigned int start_sample = 0, unsigned int end_sam
 	double time_start = header["tstart"].val.d;
 
 	if (!end_sample) {
-		end_sample = data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
+		end_sample = data_size / (n_bytes * header["nchans"].val.i * n_ifs);
 	}
 
-	int n_samples = end_sample - start_sample;
+	n_samples = end_sample - start_sample;
 
 	for (int i = 0; i < n_samples; i++) {
 		timestamps.push_back(i * sample_interval / 24. / 60. / 60 + time_start);
@@ -273,11 +320,10 @@ unsigned int filterbank::read_key_size() {
 	return keylen;
 }
 
-char* filterbank::read_string() {
-	int strlen = 0;
-	fread(&strlen, sizeof(uint32_t), 1, f);
-	char* buffer = new char[strlen + 1]{ '\0' };	
-	fread(buffer, sizeof(char), strlen, f);
+char* filterbank::read_string(int& keylen) {
+	fread(&keylen, sizeof(uint32_t), 1, f);
+	char* buffer = new char[keylen + 1]{ '\0' };
+	fread(buffer, sizeof(char), keylen, f);
 	return buffer;
 }
 
