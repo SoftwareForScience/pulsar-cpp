@@ -121,8 +121,7 @@ bool filterbank::read_header() {
 	}
 
 	//unsigned int keylen = read_key_size();
-	unsigned int keylen;
-	char* buffer = read_string(keylen);
+	char* buffer = read_string();
 	const std::string initial(buffer);
 
 	// char* buffer = new char[keylen] { '\0' };
@@ -134,8 +133,7 @@ bool filterbank::read_header() {
 	}
 
 	while (true) {
-		keylen = 0;
-		buffer = read_string(keylen);
+		buffer = read_string();
 		const std::string token(buffer);
 		// buffer = new char[keylen + 1]{ '\0' };
 		// f.read(buffer, sizeof(char) * keylen);
@@ -153,9 +151,8 @@ bool filterbank::read_header() {
 			break;
 		}
 		case STRING: {
-			unsigned int len;
-			auto value = read_string(len);
-			strncpy_s(header[token].val.s, value, len);
+			auto value = read_string();
+			strncpy_s(header[token].val.s, value, strlen(value));
 			break;
 		}
 		};
@@ -216,7 +213,7 @@ bool filterbank::read_data() {
 			}			break;
 		}
 		case 4: {
-			float* datac = new float[n_channels];
+			float* datac = new float[n_channels] {0};
 			fread(reinterpret_cast<char*>(datac), sizeof(float), n_channels, f);
 
 			for (unsigned int i = 0; i < n_channels; i++) {
@@ -276,7 +273,7 @@ unsigned int filterbank::read_key_size() {
 	return keylen;
 }
 
-char* filterbank::read_string(unsigned int& len) {
+char* filterbank::read_string() {
 	int strlen = 0;
 	fread(&strlen, sizeof(uint32_t), 1, f);
 	char* buffer = new char[strlen + 1]{ '\0' };	

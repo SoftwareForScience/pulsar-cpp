@@ -71,8 +71,6 @@ private:
 	unsigned int file_size = 0;
 	double center_freq = 0.0;
 
-
-
 	static std::map<uint16_t, std::string> telescope_ids;
 	static std::map<uint16_t, std::string> machine_ids;
 
@@ -80,7 +78,7 @@ private:
 	T read_value();
 
 	unsigned int read_key_size();
-	char* read_string(unsigned int& len);
+	char* read_string();
 
 	template <typename T>
 	void write_value(std::string key, T value);
