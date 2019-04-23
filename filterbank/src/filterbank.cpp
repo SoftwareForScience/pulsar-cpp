@@ -73,38 +73,36 @@ void filterbank::save_filterbank() {
 	write_string("HEADER_END");
 
 
-	for (unsigned int channel = 0; channel < n_channels ; ++channel) {
+	for (unsigned int sample = 0; sample < header["nsamp"].val.i ; ++sample) {
 		switch (n_bytes) {
 		case 1: {
-			char* datac = new char[n_samples_c];
-			for (unsigned int i = 0; i < n_samples_c; i++) {
-				datac[i] = data(channel, i);
+			char* datac = new char[n_channels];
+			for (unsigned int i = 0; i < n_channels; i++) {
+				datac[i] = data(sample, i);
 			}
 
-			fwrite(datac, sizeof(char), n_samples_c, f);
+			fwrite(datac, sizeof(char), n_channels, f);
 
-			
 			break;
 		}
 		case 2: {
-			unsigned short* datas = new unsigned short[n_samples_c];
+			uint16_t* datas = new uint16_t[n_channels];
+			for (unsigned int i = 0; i < n_channels; i++) {
+				datas[i] = data(sample, i);
+			}
 
-			for (unsigned int i = 0; i < n_samples_c; i++) {
-				datas[i]= data(channel, i) ;
-			}			
-			
-			fwrite(reinterpret_cast<char*>(datas), sizeof(unsigned short), n_samples_c, f);
-			
+			fwrite(datas, sizeof(uint16_t), n_channels, f);
+
 			break;
 		}
 		case 4: {
-			float* datac = new float[n_samples_c];
+			float_t* datac = new float[n_channels];
 
-			for (unsigned int i = 0; i < n_samples_c; i++) {
-				datac[i] = data(channel, i);
+			for (unsigned int i = 0; i < n_channels; i++) {
+				datac[i] = data(sample, i);
 			}
 
-			fwrite(reinterpret_cast<char*>(datac), sizeof(float), n_samples_c, f);
+			fwrite(reinterpret_cast<char*>(datac), sizeof(float), n_channels, f);
 			break;
 		}
 		}
@@ -171,16 +169,17 @@ bool filterbank::read_header() {
 	
 	file_size = unsigned int(ftell(f));
 	data_size = file_size - header_size;
+	n_channels = header["nchans"].val.i;
 
-	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
+	center_freq = (header["fch1"].val.d +  n_channels * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
-
+	
 	telescope = telescope_ids[header["telescope_id"].val.i];
 	backend = machine_ids[header["machine_id"].val.i];
 
 	// if nsamples isn't set, get it from the data size
 	if (!header["nsamples"].val.i) {
-		header["nsamples"].val.i = data_size / n_bytes;
+		header["nsamples"].val.i = data_size / n_bytes * n_channels;
 	}
 
 	return true;
@@ -192,37 +191,37 @@ bool filterbank::read_data() {
 	fseek(f, header_size, SEEK_SET);
 
 	// Allocate a block of data
-	data.resize(n_channels, header["nsamples"].val.i);
-	n_samples_c = header["nsamples"].val.i / header["nchans"].val.i;
+	data.resize(header["nsamples"].val.i, n_channels);
 	
 	//if we've got an offset on the start, seek N bytes
-	fseek(f, n_channels_offset * n_samples_c * n_bytes, SEEK_CUR);
+	fseek(f, n_channels_offset * n_channels * n_bytes, SEEK_CUR);
 
-	for (int channel = 0; channel < n_channels; channel++) {
+	for (int sample = 0; sample < header["nsamples"].val.i ; sample++) {
 		switch (n_bytes) {
 		case 1: {
-			char* datac = new char[n_samples_c];
-			fread(datac, sizeof(char), n_samples_c, f);
+			char* datac = new char[n_channels];
+			fread(datac, sizeof(char), n_channels, f);
 
-			for (unsigned int i = 0; i< n_samples_c; i++) {
-				data(channel, i) = datac[i];
+			for (unsigned int i = 0; i< n_channels; i++) {
+				data(sample, i) = datac[i];
 			}
 			break;
 		}
 		case 2: {
-			unsigned short* datac = new unsigned short[n_samples_c];
-			fread(datac, sizeof(unsigned short), n_samples_c, f);
+			unsigned short* datac = new unsigned short[n_channels];
+			fread(reinterpret_cast<char*>(datac), sizeof(unsigned short), n_channels, f);
 
-			for (unsigned int i = 0; i < n_samples_c; i++) {
-				data(channel, i) = datac[i];
+			for (unsigned int i = 0; i < n_channels; i++) {
+				data(sample, i) = datac[i];
 			}			break;
 		}
 		case 4: {
-			float* datac = new float[n_samples_c];
-			fread(datac, sizeof(float), n_samples_c, f);
+			float* datac = new float[n_channels];
+			fread(reinterpret_cast<char*>(datac), sizeof(float), n_channels, f);
 
-			for (unsigned int i = 0; i < n_samples_c; i++) {
-				data(channel, i) = datac[i];
+			for (unsigned int i = 0; i < n_channels; i++) {
+				data(sample, i) = datac[i];
+				std::cout << "index:\t" << i <<"\tdata: " << datac[i] << "\n";
 			}
 			break;
 		}

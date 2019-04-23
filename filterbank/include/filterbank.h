@@ -49,8 +49,6 @@ public:
 	unsigned int data_size = 0;
 	unsigned int n_channels = 0;
 	unsigned int n_channels_offset = 0;
-	unsigned int n_samples_c = 0;
-
 
 	bool read_header();
 	bool read_data();
