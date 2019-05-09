@@ -1,6 +1,7 @@
 #ifndef FILTERBANK_H
 #define FILTERBANK_H
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <map>
@@ -10,7 +11,6 @@
 #include <ctime>
 #include <cstdio>
 #include "headerparam.h"
-#include "Eigen/Dense"
 
 class filterbank {
 public:
@@ -47,25 +47,29 @@ public:
 
 	unsigned int header_size = 0;
 	unsigned int data_size = 0;
+	unsigned int n_values = 0;
 	unsigned int n_samples = 0;
 	unsigned int n_channels = 0;
-	unsigned int n_channels_offset = 0;
 	unsigned int n_ifs = 0;
+	unsigned int start_channel = 0;
+	unsigned int start_sample = 0;
+	unsigned int end_channel = 0;
+	unsigned int end_sample = 0;
 
 	bool read_header();
-	bool read_data(unsigned int naddt);
+	bool read_data();
 	int read_block(int nbits, float* block, int nread);
 
 
-	void setup_time(unsigned int start_sample, unsigned int end_sample);
-	void setup_frequencies(unsigned int startchannel, unsigned int endchannel);
+	void  filterbank::setup_time(unsigned int start, unsigned int end);
+	void setup_frequencies(unsigned int startchan, unsigned int endchan);
 
 	std::string telescope;
 	std::string backend;
 
 	std::list<double> timestamps;
 	std::list<double> frequencies;
-	Eigen::MatrixXd data;
+	float* data;
 	std::string filename;
 
 private:

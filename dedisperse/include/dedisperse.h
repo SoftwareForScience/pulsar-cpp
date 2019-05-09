@@ -2,7 +2,6 @@
 #define DEDISPERSE_H
 
 #include <queue>
-#include "Eigen/Dense"
 #include "filterbank.h"
 
 
