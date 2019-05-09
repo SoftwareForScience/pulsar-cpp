@@ -47,6 +47,10 @@ void filterbank::save_filterbank() {
 	write_string("HEADER_START");
 	for each (auto param in header)
 	{
+		if (param.second.val.d == 0.0) {
+			continue;
+		}
+
 		switch (param.second.type) {
 		case INT: {
 			write_value(param.first, param.second.val.i);
@@ -110,6 +114,9 @@ bool filterbank::read_header() {
 	if (f == NULL) {
 		return false;
 	}
+
+	// Do not update the header
+	header = (const std::map<std::string, header_param>)header;
 
 	int keylen = 0;
 	char* buffer = read_string(keylen);
@@ -355,11 +362,6 @@ template <typename T>
 void filterbank::write_value(std::string key, T value) {
 	//If there's a key, associated with the value(eg: header parameters) write the key
 	std::cout << "Key:\t"<< key.c_str() << "\t\t Value:\t" << value << "\n"; 
-
-	if (key.compare("")) {
-		write_string((char*)key.c_str());
-	}
+	write_string((char*)key.c_str());
 	fwrite(&value, sizeof(T), 1, f);
-
-
 }
