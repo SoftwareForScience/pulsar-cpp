@@ -34,16 +34,17 @@ int main(int argc, char* argv[]) {
 			//error_message(string);
 		}
 	}
-	
+
 	fb.filename = outputFile;
 
-	if(naddc)
+	if (naddc)
 		decimate_channels(fb, naddc);
 	if (naddt) {
 		if (fb.n_channels * fb.n_samples % naddt)
 			std::cout << "File is not a multiple of " << naddt << "\n";
 		decimate_samples(fb, naddt);
 	}
+
 	fb.save_filterbank();
 }
 
@@ -52,21 +53,24 @@ void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
 	unsigned int n_channels_out = fb.n_channels / n_channels_to_combine;
 	unsigned int n_values_out = fb.n_ifs * n_channels_out * fb.n_samples;
 
-	float * temp = new float[n_values_out];
+	float* temp = new float[n_values_out];
 
 	for (unsigned int sample = fb.start_sample; sample < fb.end_sample; sample++) {
 		for (unsigned int interface = 0; interface < fb.n_ifs; interface++) {
-			for (unsigned int channel = fb.start_channel; channel < fb.end_channel; channel++) {
+			unsigned int channel = fb.start_channel;
+			while (channel < fb.end_channel) {
 				float total = 0;
-				for (int j = 0; j < n_channels_to_combine; ++j) {
+
+				for (unsigned int j = 0; j < n_channels_to_combine; ++j) {
 					int index = (sample * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel;
 					total += fb.data[index];
 					channel++;
 				}
 				float avg = total / n_channels_to_combine;
-				
 
-				unsigned int out_index = (sample * fb.n_ifs * n_channels_out) + (interface * n_channels_out) + ((channel/n_channels_to_combine)) - 1;
+				unsigned int out_index = (sample * fb.n_ifs * n_channels_out)
+					+ (interface * n_channels_out)
+					+ ((channel / n_channels_to_combine) - 1);
 				temp[out_index] = avg;
 			}
 		}
@@ -75,7 +79,7 @@ void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
 	fb.header["nchans"].val.i = n_channels_out;
 	fb.n_channels = n_channels_out;
 	//resize the matrix to our new format
-	fb.data = temp;	
+	fb.data = temp;
 }
 
 void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
@@ -84,19 +88,23 @@ void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 
 	float* temp = new float[n_values_out];
 
-	for (int channel = fb.start_channel; channel < fb.end_channel; channel++) {
+	for (unsigned int channel = fb.start_channel; channel < fb.end_channel; channel++) {
 		for (unsigned int interface = 0; interface < fb.n_ifs; interface++) {
-			for (int sample = fb.start_sample; sample < fb.end_sample; sample++) {
+			unsigned int sample = fb.start_sample;
+
+			while (sample < fb.end_sample) {
 				float total = 0;
-				for (int j = 0; j < n_samples_to_combine; ++j) {
+				for (unsigned int j = 0; j < n_samples_to_combine; ++j) {
 					unsigned int index = (sample * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel;
 					total += fb.data[index];
 					sample++;
 				}
 
 				float avg = total / n_samples_to_combine;
-				
-				int out_index = (((sample/n_samples_to_combine) * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel) -1;
+
+				int out_index = (((((sample + 1) / n_samples_to_combine) - 1) * fb.n_ifs * fb.n_channels)
+					+ (interface * fb.n_channels) 
+					+ channel);
 				temp[out_index] = avg;
 			}
 		}

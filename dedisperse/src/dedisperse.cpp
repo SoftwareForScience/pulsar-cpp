@@ -32,7 +32,7 @@ float find_dispersion_measure(filterbank& fb, double max_delay, float pulsar_int
 {
 	//int len = fb.header["nsamples"].val.i;
 
-	int start_sample_index;
+	//int start_sample_index;
 
 	//for (int i = 0; i < fb.n_samples_c; ++i) {
 	//	float sample = ((float*) & (fb.data))[i];

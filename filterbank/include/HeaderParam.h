@@ -9,9 +9,9 @@ enum dataType
 };
 
 union headerValue {
-	int i;
+	int32_t i;
 	char s[80]{"\0"};
-	double d ;
+	double_t d ;
 };
 
 struct header_param

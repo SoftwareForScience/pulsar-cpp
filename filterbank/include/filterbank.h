@@ -58,7 +58,6 @@ public:
 
 	bool read_header();
 	bool read_data();
-	int read_block(int nbits, float* block, int nread);
 
 
 	void  filterbank::setup_time(unsigned int start, unsigned int end);
@@ -86,7 +85,8 @@ private:
 	T read_value();
 
 	unsigned int read_key_size();
-	char* read_string(int& keylen);
+	char* read_string(unsigned int& keylen);
+	unsigned int read_block(uint16_t nbits, float* block, unsigned int nread);
 
 	template <typename T>
 	void write_value(std::string key, T value);
