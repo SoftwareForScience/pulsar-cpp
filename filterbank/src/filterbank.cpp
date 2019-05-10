@@ -37,7 +37,7 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	return fb;
 }
 
-void filterbank::save_filterbank() {
+void filterbank::save_filterbank(bool save_header = true) {
 	auto err = fopen_s(&f, filename.c_str(), "wb");
 	//f = fopen(filename.c_str(), "wb");
 
@@ -46,30 +46,32 @@ void filterbank::save_filterbank() {
 		return;
 	}		
 
-	write_string("HEADER_START");
-	for each (auto param in header)
-	{
-		if (param.second.val.d == 0.0) {
-			continue;
-		}
+	if (save_header) {
+		write_string("HEADER_START");
+		for each (auto param in header)
+		{
+			if (param.second.val.d == 0.0) {
+				continue;
+			}
 
-		switch (param.second.type) {
-		case INT: {
-			write_value(param.first, param.second.val.i);
-			break;
+			switch (param.second.type) {
+			case INT: {
+				write_value(param.first, param.second.val.i);
+				break;
+			}
+			case DOUBLE: {
+				write_value(param.first, param.second.val.d);
+				break;
+			}
+			case STRING: {
+				write_string((char*)param.first.c_str());
+				write_string((char*)param.second.val.s);
+				break;
+			}
+			}
 		}
-		case DOUBLE: {
-			write_value(param.first, param.second.val.d);
-			break;
-		}
-		case STRING: {
-			write_string((char*)param.first.c_str());
-			write_string((char*)param.second.val.s);
-			break;
-		}
-		}
+		write_string("HEADER_END");
 	}
-	write_string("HEADER_END");
 
 	for (unsigned int sample = 0; sample < n_samples; ++sample) {
 		for (unsigned int interface = 0; interface < n_ifs; ++interface) {

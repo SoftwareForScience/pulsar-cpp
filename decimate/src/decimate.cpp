@@ -10,6 +10,7 @@ int main(int argc, char* argv[]) {
 
 
 	int num_chans = 1, num_samps = 1, num_output_samples = 0;
+	bool save_header = true;
 	std::string outputFile = "";
 	filterbank fb;
 
@@ -42,7 +43,7 @@ int main(int argc, char* argv[]) {
 			fb.header["nbits"].val.i = atoi(argv[++i]);
 		}
 		else if (!argList[i].compare("-headerless")) {
-			fb.header = {};
+			save_header = false;
 		}
 		else {
 			show_usage(argList[0]);
@@ -67,7 +68,7 @@ int main(int argc, char* argv[]) {
 		decimate_samples(fb, num_samps);
 	}
 
-	fb.save_filterbank();
+	fb.save_filterbank(save_header);
 }
 
 void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
