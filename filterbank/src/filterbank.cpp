@@ -22,8 +22,7 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	clock_t time_req = clock();
 
 	fb.filename = filename;
-
-
+	
 	if (!fb.read_header()) {
 		throw "Invalid filterbank file";
 	}
@@ -42,8 +41,10 @@ void filterbank::save_filterbank() {
 	auto err = fopen_s(&f, filename.c_str(), "wb");
 	//f = fopen(filename.c_str(), "wb");
 
-	if (f == NULL)
-		std::cout << "Failed to write to file \n";
+	if (f == NULL || err) {
+		std::cerr << "Failed to write to file \n";
+		return;
+	}		
 
 	write_string("HEADER_START");
 	for each (auto param in header)
@@ -113,18 +114,14 @@ filterbank::filterbank() {
 
 bool filterbank::read_header() {
 	auto err = fopen_s(&f, filename.c_str(), "rb");
-	//f = fopen(filename.c_str(), "rb");
 
-	if (f == NULL) {
+	if (f == NULL || err) {
 		return false;
 	}
 
 	unsigned int keylen = 0;
 	char* buffer = read_string(keylen);
 	const std::string initial(buffer);
-
-	// char* buffer = new char[keylen] { '\0' };
-	// f.read(buffer, sizeof(char) * keylen);
 
 	if (initial.compare("HEADER_START")) {
 		// if this isn't present, the file is not a valid filterbank file.
@@ -134,12 +131,9 @@ bool filterbank::read_header() {
 	while (true) {
 		buffer = read_string(keylen);
 		const std::string token(buffer);
-		// buffer = new char[keylen + 1]{ '\0' };
-		// f.read(buffer, sizeof(char) * keylen);
 		if (!token.compare("HEADER_END")) {
 			// get size of the header by getting the current position;
 			header_size = unsigned int(ftell(f));
-
 			break;
 		}
 
@@ -189,11 +183,11 @@ bool filterbank::read_header() {
 
 bool filterbank::read_data() {
 	auto err = fopen_s(&f, filename.c_str(), "rb");
-	//f = fopen(filename.c_str(), "rb");
 	
-	if (f == NULL)
+	if (f == NULL || err) {
 		return false;
-	
+	}
+
 	fseek(f, header_size, SEEK_SET);
 
 	// Allocate a block of data
@@ -264,10 +258,6 @@ unsigned int filterbank::read_block(uint16_t nbits, float* block, unsigned int n
 		break;
 	case 32:
 		samples_read = fread(block, sizeof(float), nread, f);
-		
-		auto eof = feof(f);
-		auto err = ferror(f);
-
 		break;
 	}
 

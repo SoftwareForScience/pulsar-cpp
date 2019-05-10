@@ -3,46 +3,68 @@
 int main(int argc, char* argv[]) {
 
 	std::vector<std::string> argList(argv, argv + argc);
-	if (argList.size() == 1)
-		std::cout << "Please supply a filterbank file \n";
+	if (argList.size() < 2) {
+		show_usage(argList[0]);
+		exit(-1);
+	}
 
-	int naddc = 0, naddt = 0;
+
+	int num_chans = 1, num_samps = 1, num_output_samples = 0;
 	std::string outputFile = "";
 	filterbank fb;
 
-	for (int i = 1; i < argList.size(); i++) {
+	if (asteria::file_exists(argList[1])) {
+		std::string filename = argList[1];
+		fb = filterbank::read_filterbank(filename);
+		fb.read_data();
+	}
+	else {
+		show_usage(argList[0]);
+		std::cerr << "file: " << argList[1] << "does not exist\n";
+		exit(-1);
+	}
+
+	for (int i = 2; i < argList.size(); i++) {
 		if (!argList[i].compare("-c")) {
-			i++;
-			naddc = atoi(argv[i]);
+			num_chans = atoi(argv[++i]);
 		}
 		else if (!argList[i].compare("-o")) {
-			i++;
-			outputFile = argList[i];
+			fb.filename = argList[++i];
 		}
 		else if (!argList[i].compare("-t")) {
-			i++;
-			naddt = atoi(argv[i]);
+			num_samps = atoi(argv[++i]);
 		}
-		else if (asteria::file_exists(argList[i])) {
-			std::string filename = argList[i];
-			fb = filterbank::read_filterbank(filename);
-			fb.read_data();
+		else if (!argList[i].compare("-T")) {
+			num_output_samples = atoi(argv[++i]);
+			num_samps = fb.n_samples / num_output_samples;
+		}
+		else if (!argList[i].compare("-n")) {
+			fb.header["nbits"].val.i = atoi(argv[++i]);
+		}
+		else if (!argList[i].compare("-headerless")) {
+			fb.header = {};
 		}
 		else {
-			//decimate_help();
-			//sprintf(string, "unknown argument (%s) passed to decimate", argv[i]);
-			//error_message(string);
+			show_usage(argList[0]);
+			std::cerr << "unknown argument " << argv[i] << " passed to decimate\n";
+			exit(-2);
 		}
 	}
 
-	fb.filename = outputFile;
+	if (fb.n_channels % num_samps) {
+		std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
+		exit(-3);
+	}
+	if (fb.n_samples % num_samps) {
+		std::cerr << "File does not contain a multiple of: " << num_samps << " samples.\n";
+		exit(-3);
+	}
 
-	if (naddc)
-		decimate_channels(fb, naddc);
-	if (naddt) {
-		if (fb.n_channels * fb.n_samples % naddt)
-			std::cout << "File is not a multiple of " << naddt << "\n";
-		decimate_samples(fb, naddt);
+	if (num_chans) {
+		decimate_channels(fb, num_chans);
+	}
+	if (num_samps) {
+		decimate_samples(fb, num_samps);
 	}
 
 	fb.save_filterbank();
@@ -102,8 +124,8 @@ void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 
 				float avg = total / n_samples_to_combine;
 
-				int out_index = (((((sample + 1) / n_samples_to_combine) - 1) * fb.n_ifs * fb.n_channels)
-					+ (interface * fb.n_channels) 
+				int out_index = (((((sample) / n_samples_to_combine) - 1) * fb.n_ifs * fb.n_channels)
+					+ (interface * fb.n_channels)
 					+ channel);
 				temp[out_index] = avg;
 			}
@@ -118,4 +140,18 @@ void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 
 	//resize the matrix to our new format
 	fb.data = temp;
+}
+
+void show_usage(std::string name) {
+	std::cerr
+		<< name << " - reduce time and/or frequency resolution of filterbank data\n" << std::endl
+		<< "usage: " << name << "{filename} -{options}\n" << std::endl
+		<< "options: \n" << std::endl
+		<< "   filename - filterbank data file (def=stdin)" << std::endl
+		<< "-o filename - output filterbank data file" << std::endl
+		<< "-c numchans - number of channelsto add (def=all)" << std::endl
+		<< "-t numsamps - number of time samples to add (def=none)" << std::endl
+		<< "-T numsamps - (alternative to -t) specify numberof output timesamples" << std::endl
+		<< "-n numbits  - specify output numberof bits(def=input)" << std::endl
+		<< "-headerless - do not broadcast resulting header(def=broadcast)" << std::endl;
 }
