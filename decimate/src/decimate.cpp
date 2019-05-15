@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
 		fb.read_data();
 	}
 	else {
-		show_usage(argList[0]);
+		show_usage("Decimate");
 		std::cerr << "file: " << argList[1] << "does not exist\n";
 		exit(-1);
 	}
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 			save_header = false;
 		}
 		else {
-			show_usage(argList[0]);
+			show_usage("Decimate");
 			std::cerr << "unknown argument " << argv[i] << " passed to decimate\n";
 			exit(-2);
 		}

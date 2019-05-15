@@ -22,7 +22,7 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	clock_t time_req = clock();
 
 	fb.filename = filename;
-	
+
 	if (!fb.read_header()) {
 		throw "Invalid filterbank file";
 	}
@@ -37,14 +37,14 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	return fb;
 }
 
-void filterbank::save_filterbank(bool save_header = true) {
+void filterbank::save_filterbank(bool save_header) {
 	auto err = fopen_s(&f, filename.c_str(), "wb");
 	//f = fopen(filename.c_str(), "wb");
 
 	if (f == NULL || err) {
 		std::cerr << "Failed to write to file \n";
 		return;
-	}		
+	}
 
 	if (save_header) {
 		write_string("HEADER_START");
@@ -80,16 +80,16 @@ void filterbank::save_filterbank(bool save_header = true) {
 			case 1: {
 				char* cwbuf = new char[n_channels] {0};
 				// Get the index for the interface
-				
+
 				for (unsigned int channel = start_channel; channel < end_channel; channel++) {
-					cwbuf[channel - start_channel] = (char) data[index + channel];
+					cwbuf[channel - start_channel] = (char)data[index + channel];
 				}
-							
+
 				fwrite(cwbuf, sizeof(char), n_channels, f);
 				break;
 			}
 			case 2: {
-				uint16_t* swbuf = new uint16_t[n_channels]{0};
+				uint16_t* swbuf = new uint16_t[n_channels]{ 0 };
 				for (unsigned int channel = start_channel; channel < end_channel; channel++) {
 					swbuf[channel - start_channel] = (unsigned short)data[index + channel];
 				}
@@ -161,7 +161,7 @@ bool filterbank::read_header() {
 	fseek(f, 0, SEEK_END);
 	file_size = unsigned int(ftell(f));
 	data_size = file_size - header_size;
-	
+
 	n_channels = header["nchans"].val.i;
 	n_ifs = header["nifs"].val.i;
 	center_freq = (header["fch1"].val.d + n_channels * header["foff"].val.d / 2.0);
@@ -172,7 +172,7 @@ bool filterbank::read_header() {
 
 	// if nsamples isn't set, get it from the data size
 	if (!header["nsamples"].val.i) {
-		header["nsamples"].val.i =   data_size / (n_bytes * n_channels * n_ifs);
+		header["nsamples"].val.i = data_size / (n_bytes * n_channels * n_ifs);
 	}
 
 	n_samples = header["nsamples"].val.i;
@@ -185,16 +185,31 @@ bool filterbank::read_header() {
 
 bool filterbank::read_data() {
 	auto err = fopen_s(&f, filename.c_str(), "rb");
-	
+	auto n_bytes_read = 0;
+
 	if (f == NULL || err) {
 		return false;
 	}
 
-	fseek(f, header_size, SEEK_SET);
-
 	// Allocate a block of data
 	data = new float[n_values];
-	read_block(header["nbits"].val.i, data, n_values);
+
+	// Skip the header
+	fseek(f, header_size, SEEK_SET);
+
+	// Skip the amount of samples we're offset from
+	auto n_bytes_to_skip = (start_sample * n_ifs * header["nchans"].val.i);
+	fseek(f, n_bytes_to_skip, SEEK_CUR);
+
+		for (unsigned int sample = 0; sample < n_samples; sample ++) {
+		for (unsigned int interface = 0; interface < n_ifs; interface++) {
+			//Skip the amoun of channels we're not interested in
+			fseek(f, start_channel * n_bytes, SEEK_CUR);
+			n_bytes_read += read_block(header["nbits"].val.i, (data + n_bytes_read), n_channels);
+			//Skip the last few channels
+			fseek(f, (header["nchans"].val.i - end_channel) * n_bytes, SEEK_CUR);
+		}
+	}
 
 	fclose(f);
 
@@ -209,40 +224,6 @@ unsigned int filterbank::read_block(uint16_t nbits, float* block, unsigned int n
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (nbits) {
-	case 1:	/* read n/8 bytes into character block containing n 1-bit pairs */
-		charblock = new unsigned char[nread / 8];
-		samples_read = fread(charblock, 1, nread, f);
-		for (unsigned int i = 0; i < samples_read; i++) {
-			for (int j = 0; j < 8; j++) {
-				block[sample++] = (float)(charblock[i] & 1);
-				charblock[i] >>= 1;
-			}
-		}
-		samples_read = sample;
-		break;
-
-	case 2:	/* read n/4 bytes into character block containing n 2-bit pairs */
-		charblock = new unsigned char[nread / 4];
-		samples_read = fread(charblock, 1, nread / 4, f);
-
-		for (unsigned int i = 0; i < nread/4; i++) {
-			block[sample++] = (float)(charblock[i] & 3);
-			block[sample++] = (float)(charblock[i] & 12);
-			block[sample++] = (float)(charblock[i] & 48);
-			block[sample++] = (float)(charblock[i] & 192);
-		}
-		samples_read *= 4;
-
-	case 4:	/* read n/2 bytes into character block containing n 4-bit pairs */
-		charblock = new unsigned char[nread / 2];
-		samples_read = fread(charblock, 1, nread / 2, f);
-		for (unsigned int i = 0; i < nread/2; i++) {
-			block[sample++] = (float)(charblock[i] & 15);
-			block[sample++] = (float)((charblock[i] & 240) >> 4);
-		}
-		samples_read *= 2;
-		break;
-
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
 		charblock = new unsigned char[nread];
 		samples_read = fread(charblock, 1, nread, f);
@@ -266,7 +247,7 @@ unsigned int filterbank::read_block(uint16_t nbits, float* block, unsigned int n
 	delete[] charblock;
 	delete[] shortblock;
 
-	return (unsigned int) samples_read;
+	return (unsigned int)samples_read;
 
 }
 
@@ -288,8 +269,8 @@ void filterbank::setup_frequencies(unsigned int startchan, unsigned int endchan)
 	}
 
 	n_channels = int(f_stop - f_start);
-	start_channel = (unsigned int) std::min(f_start, f_stop);
-	end_channel = (unsigned int) std::max(f_start, f_stop);
+	start_channel = (unsigned int)std::min(f_start, f_stop);
+	end_channel = (unsigned int)std::max(f_start, f_stop);
 
 	//recalculate number of values
 	n_values = n_ifs * n_channels * n_samples;
@@ -298,7 +279,7 @@ void filterbank::setup_frequencies(unsigned int startchan, unsigned int endchan)
 void  filterbank::setup_time(unsigned int start, unsigned int end) {
 	double sample_interval = header["tsamp"].val.d;
 	double time_start = header["tstart"].val.d;
-	
+
 	if (start > end) {
 		auto temp = end;
 		end_sample = start;
@@ -354,7 +335,7 @@ T filterbank::read_value() {
 template <typename T>
 void filterbank::write_value(std::string key, T value) {
 	//If there's a key, associated with the value(eg: header parameters) write the key
-	std::cout << "Key:\t"<< key.c_str() << "\t\t Value:\t" << value << "\n"; 
+	std::cout << "Key:\t" << key.c_str() << "\t\t Value:\t" << value << "\n";
 	write_string((char*)key.c_str());
 	fwrite(&value, sizeof(T), 1, f);
 	fflush(f);
