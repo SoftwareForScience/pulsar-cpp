@@ -32,7 +32,7 @@ std::pair<unsigned int, unsigned int> find_line(filterbank& fb, unsigned int sta
 	// Loop through the channels
 	for (unsigned int channel = 0; channel < fb.n_channels; ++channel) {
 		//Loop through previous samples
-		for (unsigned int sample = 0; sample < fb.n_samples; ++sample) {
+		for (unsigned int sample = start_sample; sample < fb.n_samples; ++sample) {
 
 		}
 	}
