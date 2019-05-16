@@ -8,7 +8,7 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 
-	int num_chans = 0, num_samps = 0, num_output_samples = 0;
+	int num_chans = 1, num_samps = 1, num_output_samples = 1;
 	bool save_header = true;
 	std::string outputFile = "";
 	filterbank fb;
@@ -25,19 +25,34 @@ int main(int argc, char* argv[]) {
 		std::cerr << "file: " << argList[1] << " does not exist\n";
 		exit(-1);
 	}
-
+	//TODO: Better error handling
 	for (int i = 2; i < argList.size(); i++) {
 		if (!argList[i].compare("-c")) {
 			num_chans = atoi(argv[++i]);
+			if (num_chans <= 0) {
+				show_usage("Decimate");
+				std::cerr << "Number of channels must be greater than 0\n";
+				exit(-1);
+			}
 		}
 		else if (!argList[i].compare("-o")) {
 			fb.filename = argList[++i];
 		}
 		else if (!argList[i].compare("-t")) {
 			num_samps = atoi(argv[++i]);
+			if (num_samps <= 0) {
+				show_usage("Decimate");
+				std::cerr << "Number of samples must be greater than 0\n";
+				exit(-1);
+			}
 		}
 		else if (!argList[i].compare("-T")) {
 			num_output_samples = atoi(argv[++i]);
+			if (num_output_samples <= 0) {
+				show_usage("Decimate");
+				std::cerr << "Number of output timesamples must be greater than 0\n";
+				exit(-1);
+			}
 			num_samps = fb.n_samples / num_output_samples;
 		}
 		else if (!argList[i].compare("-n")) {
@@ -148,7 +163,7 @@ void show_usage(std::string name) {
 		<< "options: \n" << std::endl
 		<< "   filename - filterbank data file (def=stdin)" << std::endl
 		<< "-o filename - output filterbank data file" << std::endl
-		<< "-c numchans - number of channelsto add (def=all)" << std::endl
+		<< "-c numchans - number of channels to add (def=all)" << std::endl
 		<< "-t numsamps - number of time samples to add (def=none)" << std::endl
 		<< "-T numsamps - (alternative to -t) specify numberof output timesamples" << std::endl
 		<< "-n numbits  - specify output numberof bits(def=input)" << std::endl
