@@ -10,6 +10,7 @@
 #include <list>
 #include <ctime>
 #include <cstdio>
+#include <cstring>
 #include "HeaderParam.h"
 
 class filterbank {
@@ -60,7 +61,7 @@ public:
 	bool read_data();
 
 
-	void  filterbank::setup_time(unsigned int start, unsigned int end);
+	void setup_time(unsigned int start, unsigned int end);
 	void setup_frequencies(unsigned int startchan, unsigned int endchan);
 
 	std::string telescope;
@@ -90,7 +91,7 @@ private:
 
 	template <typename T>
 	void write_value(std::string key, T value);
-	void write_string(char* string );
+	void write_string(char* string, unsigned int len);
 };
 
 #endif // !FILTERBANK_H

@@ -38,17 +38,16 @@ filterbank filterbank::read_filterbank(std::string filename) {
 }
 
 void filterbank::save_filterbank(bool save_header) {
-	auto err = fopen_s(&f, filename.c_str(), "wb");
-	//f = fopen(filename.c_str(), "wb");
-
-	if (f == NULL || err) {
+	f = fopen(filename.c_str(), "wb");
+//TODO: Error handling
+	if (f == NULL) {
 		std::cerr << "Failed to write to file \n";
 		return;
 	}
 
 	if (save_header) {
-		write_string("HEADER_START");
-		for each (auto param in header)
+		write_string((char*)"HEADER_START", 12);
+		for(auto param : header)
 		{
 			if (param.second.val.d == 0.0) {
 				continue;
@@ -64,13 +63,13 @@ void filterbank::save_filterbank(bool save_header) {
 				break;
 			}
 			case STRING: {
-				write_string((char*)param.first.c_str());
-				write_string((char*)param.second.val.s);
+				write_string((char*)param.first.c_str(), sizeof(param.first.c_str()));
+				write_string((char*)param.second.val.s, sizeof(param.second.val.s));
 				break;
 			}
 			}
 		}
-		write_string("HEADER_END");
+		write_string((char*)"HEADER_END", 10);
 	}
 
 	for (unsigned int sample = 0; sample < n_samples; ++sample) {
@@ -115,9 +114,10 @@ filterbank::filterbank() {
 }
 
 bool filterbank::read_header() {
-	auto err = fopen_s(&f, filename.c_str(), "rb");
+	//TODO: Error handling
+	f = fopen(filename.c_str(), "rb");
 
-	if (f == NULL || err) {
+	if (f == NULL) {
 		return false;
 	}
 
@@ -135,7 +135,7 @@ bool filterbank::read_header() {
 		const std::string token(buffer);
 		if (!token.compare("HEADER_END")) {
 			// get size of the header by getting the current position;
-			header_size = unsigned int(ftell(f));
+			header_size = ftell(f);
 			break;
 		}
 
@@ -150,7 +150,8 @@ bool filterbank::read_header() {
 		}
 		case STRING: {
 			auto value = read_string(keylen);
-			strncpy_s(header[token].val.s, value, keylen);
+			//TODO: Error handling
+			strncpy(header[token].val.s, value, keylen);
 			break;
 		}
 		};
@@ -159,7 +160,7 @@ bool filterbank::read_header() {
 
 	// get the size of the file by looking for the end, then getting the current position;
 	fseek(f, 0, SEEK_END);
-	file_size = unsigned int(ftell(f));
+	file_size = ftell(f);
 	data_size = file_size - header_size;
 
 	n_channels = header["nchans"].val.i;
@@ -184,10 +185,11 @@ bool filterbank::read_header() {
 }
 
 bool filterbank::read_data() {
-	auto err = fopen_s(&f, filename.c_str(), "rb");
+	//TODO: Error handling
+	f = fopen(filename.c_str(), "rb");
 	auto n_bytes_read = 0;
 
-	if (f == NULL || err) {
+	if (f == NULL) {
 		return false;
 	}
 
@@ -319,8 +321,7 @@ char* filterbank::read_string(unsigned int& keylen) {
 	return buffer;
 }
 
-void filterbank::write_string(char* string) {
-	unsigned int len = (unsigned int)strlen(string);
+void filterbank::write_string(char* string, unsigned int len) {
 	//Write the length of our string
 	fwrite(&len, sizeof(int), 1, f);
 	//then write the actual string
@@ -339,7 +340,7 @@ template <typename T>
 void filterbank::write_value(std::string key, T value) {
 	//If there's a key, associated with the value(eg: header parameters) write the key
 	std::cout << "Key:\t" << key.c_str() << "\t\t Value:\t" << value << "\n";
-	write_string((char*)key.c_str());
+	write_string((char*)key.c_str(), sizeof(key.c_str()));
 	fwrite(&value, sizeof(T), 1, f);
 	fflush(f);
 }
