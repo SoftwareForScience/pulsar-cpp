@@ -10,7 +10,7 @@
 #include <list>
 #include <ctime>
 #include <cstdio>
-#include "headerparam.h"
+#include "HeaderParam.h"
 
 class filterbank {
 public:
