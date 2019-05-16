@@ -7,10 +7,15 @@ int main(int argc, char* argv[]) {
 
 	//std::string filename = argList[1];
 	std::string filename = argv[1];
+	double max_delay = 0;
 
 	auto fb = filterbank::read_filterbank(filename);
 	fb.read_data();
-	float avg_intensity = find_estimation_intensity(fb, 10);
+	float pulsar_intensity = find_estimation_intensity(fb, 10);
+	float dispersion_measure = find_dispersion_measure(fb, pulsar_intensity, max_delay);
+
+	std::vector<double> delays_per_sample = linspace(dispersion_measure, (float)0, (int)fb.n_samples);
+
 }
 
 
@@ -19,54 +24,67 @@ float* dedisperse(filterbank& fb, int highest_x)
 	return nullptr;
 }
 
-bool find_line(filterbank* fb, unsigned int start_sample, double max_delay, float pulsar_intensity)
+std::pair<unsigned int, unsigned int> find_line(filterbank& fb, unsigned int start_sample, double max_delay, float pulsar_intensity)
 {
-
 	unsigned int previous_index = start_sample;
 	bool found_line = false;
 
-	return found_line;
+	// Loop through the channels
+	for (unsigned int channel = 0; channel < fb.n_channels; ++channel) {
+		//Loop through previous samples
+		for (unsigned int sample = 0; sample < fb.n_samples; ++sample) {
+
+		}
+	}
+
+	return std::pair<unsigned int, unsigned int> (0,0);
 }
 
 
-float find_dispersion_measure(filterbank& fb, double max_delay, float pulsar_intensity)
+float find_dispersion_measure(filterbank& fb, float pulsar_intensity, double max_delay)
 {
-	//int len = fb.header["nsamples"].val.i;
+	unsigned int start_sample_index = 0;
+	std::pair<unsigned int, unsigned int> line_coordinates;
 
-	//int start_sample_index;
-
-	//for (int i = 0; i < fb.n_samples_c; ++i) {
-	//	float sample = ((float*) & (fb.data))[i];
-
-	//	if (sample > pulsar_intensity) {
-	//		start_sample_index = i;
-
-	//		// Attemt to find a line, 
-
-	//		//line_coordinates = find_line(samples, len, max_delay, pulsar_intensity)
-	//	}
-	//}
+	// loop through the samples to find a pulsar intensity to start calcultating from
+	for (unsigned int sample = 0; sample < fb.n_samples; ++sample) {
+		int sample_index = (sample * fb.n_ifs * fb.n_channels);
+		for (unsigned int channel = 0; channel < fb.n_channels; ++channel) {
+			//if the sample meets the minimum intensity, attempt to find a line continueing from the intensity
+			if (fb.data[sample_index + channel] > pulsar_intensity) {
+				start_sample_index = sample;
+				
+				//attempt to find a line, line_coordinates contains the first and last index of the pulsar
+				line_coordinates = find_line(fb, start_sample_index, max_delay, pulsar_intensity);
+			}
+		}
+	}
 
 	return 0.0f;
 }
 
 float find_estimation_intensity(filterbank& fb, int highest_x)
 {
-	//sum the highest n values per channel;
-	std::priority_queue<float> q;
-	for (unsigned int index = 0; index < fb.n_values; ++index) {
-		q.push(fb.data[index]);
-	}
-
 	float sum_intensities = 0.0;
 
-	for (int i = 0; i < highest_x; ++i) {
-		float val = q.top();
-		sum_intensities += val;
-		q.pop();
+	//sum the highest n values per sample;
+	for (unsigned int sample = 0; sample < fb.n_samples; ++sample) {
+		int sample_index = (sample * fb.n_ifs * fb.n_channels);
+
+		std::priority_queue<float> q;
+		for (unsigned int channel = 0; channel < fb.n_channels; ++channel) {
+			q.push(fb.data[sample_index + channel]);
+		}
+
+		for (int i = 0; i < highest_x; ++i) {
+			float val = q.top();
+			sum_intensities += val;
+			q.pop();
+		}
 	}
 
-	float average_intensity = (sum_intensities / highest_x);
+
+	float average_intensity = (sum_intensities /  (fb.n_samples * highest_x));
 	return average_intensity;
 }
 
