@@ -8,8 +8,7 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 
-
-	int num_chans = 1, num_samps = 1, num_output_samples = 0;
+	int num_chans = 0, num_samps = 0, num_output_samples = 0;
 	bool save_header = true;
 	std::string outputFile = "";
 	filterbank fb;
@@ -19,9 +18,11 @@ int main(int argc, char* argv[]) {
 		fb = filterbank::read_filterbank(filename);
 		fb.read_data();
 	}
+
+	// TODO: Check if file starts with HEADER_START, if so, use the file.
 	else {
 		show_usage("Decimate");
-		std::cerr << "file: " << argList[1] << "does not exist\n";
+		std::cerr << "file: " << argList[1] << " does not exist\n";
 		exit(-1);
 	}
 
@@ -52,7 +53,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (fb.n_channels % num_samps) {
+	if (fb.n_channels % num_chans) {
 		std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
 		exit(-3);
 	}
@@ -101,7 +102,6 @@ void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
 
 	fb.header["nchans"].val.i = n_channels_out;
 	fb.n_channels = n_channels_out;
-	//resize the matrix to our new format
 	fb.data = temp;
 }
 
@@ -138,8 +138,6 @@ void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 
 	// if we decrease the amount of samples, the time between samples increase
 	fb.header["tsamp"].val.d = fb.header["tsamp"].val.d * n_samples_to_combine;
-
-	//resize the matrix to our new format
 	fb.data = temp;
 }
 

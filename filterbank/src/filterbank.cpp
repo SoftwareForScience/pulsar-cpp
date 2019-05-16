@@ -203,11 +203,14 @@ bool filterbank::read_data() {
 
 		for (unsigned int sample = 0; sample < n_samples; sample ++) {
 		for (unsigned int interface = 0; interface < n_ifs; interface++) {
+			int start_bytes_to_skip = start_channel * n_bytes;
+			int end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
+
 			//Skip the amoun of channels we're not interested in
-			fseek(f, start_channel * n_bytes, SEEK_CUR);
+			fseek(f, start_bytes_to_skip, SEEK_CUR);
 			n_bytes_read += read_block(header["nbits"].val.i, (data + n_bytes_read), n_channels);
 			//Skip the last few channels
-			fseek(f, (header["nchans"].val.i - end_channel) * n_bytes, SEEK_CUR);
+			fseek(f, end_bytes_to_skip , SEEK_CUR);
 		}
 	}
 
