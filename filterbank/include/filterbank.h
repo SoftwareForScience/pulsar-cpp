@@ -91,7 +91,7 @@ private:
 
 	template <typename T>
 	void write_value(std::string key, T value);
-	void write_string(char* string, unsigned int len);
+	void write_string(std::string string);
 };
 
 #endif // !FILTERBANK_H

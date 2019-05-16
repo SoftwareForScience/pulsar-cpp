@@ -29,11 +29,11 @@ filterbank filterbank::read_filterbank(std::string filename) {
 
 	fb.setup_time(false, false);
 	time_req = clock() - time_req;
-	std::cout << "Time spent setting time: " << time_req / CLOCKS_PER_SEC << " seconds\n";
+	// std::cout << "Time spent setting time: " << time_req / CLOCKS_PER_SEC << " seconds\n";
 
 	fb.setup_frequencies(false, false);
 	time_req = clock() - time_req;
-	std::cout << "Time spent setting up channels: " << time_req / CLOCKS_PER_SEC << " seconds\n";
+	// std::cout << "Time spent setting up channels: " << time_req / CLOCKS_PER_SEC << " seconds\n";
 	return fb;
 }
 
@@ -46,30 +46,31 @@ void filterbank::save_filterbank(bool save_header) {
 	}
 
 	if (save_header) {
-		write_string((char*)"HEADER_START", 12);
+		//TODO: Pointers? Rewrite to single method for any int/double/string?
+		write_string("HEADER_START");
 		for(auto param : header)
 		{
+			//Skip unused headers
 			if (param.second.val.d == 0.0) {
 				continue;
 			}
-
 			switch (param.second.type) {
-			case INT: {
-				write_value(param.first, param.second.val.i);
-				break;
-			}
-			case DOUBLE: {
-				write_value(param.first, param.second.val.d);
-				break;
-			}
-			case STRING: {
-				write_string((char*)param.first.c_str(), sizeof(param.first.c_str()));
-				write_string((char*)param.second.val.s, sizeof(param.second.val.s));
-				break;
-			}
+				case INT: {
+					write_value(param.first, param.second.val.i);
+					break;
+				}
+				case DOUBLE: {
+					write_value(param.first, param.second.val.d);
+					break;
+				}
+				case STRING: {
+					write_string(param.first);
+					write_string(param.second.val.s);
+					break;
+				}
 			}
 		}
-		write_string((char*)"HEADER_END", 10);
+		write_string("HEADER_END");
 	}
 
 	for (unsigned int sample = 0; sample < n_samples; ++sample) {
@@ -208,7 +209,7 @@ bool filterbank::read_data() {
 			int start_bytes_to_skip = start_channel * n_bytes;
 			int end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
 
-			//Skip the amoun of channels we're not interested in
+			//Skip the amount of channels we're not interested in
 			fseek(f, start_bytes_to_skip, SEEK_CUR);
 			n_bytes_read += read_block(header["nbits"].val.i, (data + n_bytes_read), n_channels);
 			//Skip the last few channels
@@ -321,11 +322,12 @@ char* filterbank::read_string(unsigned int& keylen) {
 	return buffer;
 }
 
-void filterbank::write_string(char* string, unsigned int len) {
+void filterbank::write_string(std::string string) {
+	unsigned int len = string.length();
 	//Write the length of our string
 	fwrite(&len, sizeof(int), 1, f);
 	//then write the actual string
-	fwrite(string, sizeof(char), len, f);
+	fwrite(string.c_str(), sizeof(char), len, f);
 	fflush(f);
 }
 
@@ -339,8 +341,9 @@ T filterbank::read_value() {
 template <typename T>
 void filterbank::write_value(std::string key, T value) {
 	//If there's a key, associated with the value(eg: header parameters) write the key
-	std::cout << "Key:\t" << key.c_str() << "\t\t Value:\t" << value << "\n";
-	write_string((char*)key.c_str(), sizeof(key.c_str()));
+	// std::cout << "Key:\t" << key.c_str() << "\t\t Value:\t" << value << "\n";
+	// write_string((char*)key.c_str(), key.length());
+	write_string(key);
 	fwrite(&value, sizeof(T), 1, f);
 	fflush(f);
 }
