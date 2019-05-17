@@ -7,7 +7,7 @@
 #include "filterbank.h"
 #include "fileutils.h"
 
-void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine);
-void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine);
+void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine);
+void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine);
 void show_usage(std::string name);
 #endif // !DECIMATE_H

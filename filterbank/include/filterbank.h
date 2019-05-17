@@ -46,23 +46,23 @@ public:
 		{"ibeam", INT}
 	};
 
-	unsigned int header_size = 0;
-	unsigned int data_size = 0;
-	unsigned int n_values = 0;
-	unsigned int n_samples = 0;
-	unsigned int n_channels = 0;
-	unsigned int n_ifs = 0;
-	unsigned int start_channel = 0;
-	unsigned int start_sample = 0;
-	unsigned int end_channel = 0;
-	unsigned int end_sample = 0;
+	uint32_t header_size = 0;
+	uint32_t data_size = 0;
+	uint32_t n_values = 0;
+	uint32_t n_samples = 0;
+	uint32_t n_channels = 0;
+	uint32_t n_ifs = 0;
+	uint32_t start_channel = 0;
+	uint32_t start_sample = 0;
+	uint32_t end_channel = 0;
+	uint32_t end_sample = 0;
 
 	bool read_header();
 	bool read_data();
 
 
-	void setup_time(unsigned int start, unsigned int end);
-	void setup_frequencies(unsigned int startchan, unsigned int endchan);
+	void setup_time(uint32_t start, uint32_t end);
+	void setup_frequencies(uint32_t startchan, uint32_t endchan);
 
 	std::string telescope;
 	std::string backend;
@@ -75,8 +75,8 @@ public:
 private:
 	FILE* f;
 
-	unsigned int n_bytes = 0;
-	unsigned int file_size = 0;
+	uint32_t n_bytes = 0;
+	uint32_t file_size = 0;
 	double center_freq = 0.0;
 
 	static std::map<uint16_t, std::string> telescope_ids;
@@ -85,9 +85,9 @@ private:
 	template <typename T>
 	T read_value();
 
-	unsigned int read_key_size();
-	char* read_string(unsigned int& keylen);
-	unsigned int read_block(uint16_t nbits, float* block, unsigned int nread);
+	uint32_t read_key_size();
+	char* read_string(uint32_t& keylen);
+	uint32_t read_block(uint16_t nbits, float* block, uint32_t nread);
 
 	template <typename T>
 	void write_value(std::string key, T value);

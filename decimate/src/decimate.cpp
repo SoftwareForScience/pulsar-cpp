@@ -1,6 +1,6 @@
 #include "decimate.h"
 
-int main(int argc, char* argv[]) {
+int32_t main(int32_t argc, char* argv[]) {
 
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() < 2) {
@@ -8,7 +8,7 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 
-	int num_chans = 1, num_samps = 1, num_output_samples = 1;
+	int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;
 	bool save_header = true;
 	std::string outputFile = "";
 	filterbank fb;
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 	//TODO: Better error handling
-	for (int i = 2; i < argList.size(); i++) {
+	for (int32_t i = 2; i < argList.size(); i++) {
 		if (!argList[i].compare("-c")) {
 			num_chans = atoi(argv[++i]);
 			if (num_chans <= 0) {
@@ -87,27 +87,27 @@ int main(int argc, char* argv[]) {
 	fb.save_filterbank(save_header);
 }
 
-void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
+void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 
-	unsigned int n_channels_out = fb.n_channels / n_channels_to_combine;
-	unsigned int n_values_out = fb.n_ifs * n_channels_out * fb.n_samples;
+	uint32_t n_channels_out = fb.n_channels / n_channels_to_combine;
+	uint32_t n_values_out = fb.n_ifs * n_channels_out * fb.n_samples;
 
 	float* temp = new float[n_values_out];
 
-	for (unsigned int sample = fb.start_sample; sample < fb.end_sample; sample++) {
-		for (unsigned int interface = 0; interface < fb.n_ifs; interface++) {
-			unsigned int channel = fb.start_channel;
+	for (uint32_t sample = fb.start_sample; sample < fb.end_sample; sample++) {
+		for (uint32_t interface = 0; interface < fb.n_ifs; interface++) {
+			uint32_t channel = fb.start_channel;
 			while (channel < fb.end_channel) {
 				float total = 0;
 
-				for (unsigned int j = 0; j < n_channels_to_combine; ++j) {
-					int index = (sample * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel;
+				for (uint32_t j = 0; j < n_channels_to_combine; ++j) {
+					int32_t index = (sample * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel;
 					total += fb.data[index];
 					channel++;
 				}
 				float avg = total / n_channels_to_combine;
 
-				unsigned int out_index = (sample * fb.n_ifs * n_channels_out)
+				uint32_t out_index = (sample * fb.n_ifs * n_channels_out)
 					+ (interface * n_channels_out)
 					+ ((channel / n_channels_to_combine) - 1);
 				temp[out_index] = avg;
@@ -120,27 +120,27 @@ void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
 	fb.data = temp;
 }
 
-void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
-	unsigned int n_samples_out = fb.n_samples / n_samples_to_combine;
-	unsigned int n_values_out = fb.n_ifs * fb.n_channels * n_samples_out;
+void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
+	uint32_t n_samples_out = fb.n_samples / n_samples_to_combine;
+	uint32_t n_values_out = fb.n_ifs * fb.n_channels * n_samples_out;
 
 	float* temp = new float[n_values_out];
 
-	for (unsigned int channel = fb.start_channel; channel < fb.end_channel; channel++) {
-		for (unsigned int interface = 0; interface < fb.n_ifs; interface++) {
-			unsigned int sample = fb.start_sample;
+	for (uint32_t channel = fb.start_channel; channel < fb.end_channel; channel++) {
+		for (uint32_t interface = 0; interface < fb.n_ifs; interface++) {
+			uint32_t sample = fb.start_sample;
 
 			while (sample < fb.end_sample) {
 				float total = 0;
-				for (unsigned int j = 0; j < n_samples_to_combine; ++j) {
-					unsigned int index = (sample * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel;
+				for (uint32_t j = 0; j < n_samples_to_combine; ++j) {
+					uint32_t index = (sample * fb.n_ifs * fb.n_channels) + (interface * fb.n_channels) + channel;
 					total += fb.data[index];
 					sample++;
 				}
 
 				float avg = total / n_samples_to_combine;
 
-				int out_index = (((((sample) / n_samples_to_combine) - 1) * fb.n_ifs * fb.n_channels)
+				int32_t out_index = (((((sample) / n_samples_to_combine) - 1) * fb.n_ifs * fb.n_channels)
 					+ (interface * fb.n_channels)
 					+ channel);
 				temp[out_index] = avg;

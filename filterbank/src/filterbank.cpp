@@ -73,15 +73,15 @@ void filterbank::save_filterbank(bool save_header) {
 		write_string("HEADER_END");
 	}
 
-	for (unsigned int sample = 0; sample < n_samples; ++sample) {
-		for (unsigned int interface = 0; interface < n_ifs; ++interface) {
-			int index = (sample * n_ifs * n_channels) + (interface * n_channels);
+	for (uint32_t sample = 0; sample < n_samples; ++sample) {
+		for (uint32_t interface = 0; interface < n_ifs; ++interface) {
+			int32_t index = (sample * n_ifs * n_channels) + (interface * n_channels);
 			switch (n_bytes) {
 			case 1: {
 				char* cwbuf = new char[n_channels] {0};
 				// Get the index for the interface
 
-				for (unsigned int channel = start_channel; channel < end_channel; channel++) {
+				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
 					cwbuf[channel - start_channel] = (char)data[index + channel];
 				}
 
@@ -90,8 +90,8 @@ void filterbank::save_filterbank(bool save_header) {
 			}
 			case 2: {
 				uint16_t* swbuf = new uint16_t[n_channels]{ 0 };
-				for (unsigned int channel = start_channel; channel < end_channel; channel++) {
-					swbuf[channel - start_channel] = (unsigned short)data[index + channel];
+				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
+					swbuf[channel - start_channel] = (uint16_t)data[index + channel];
 				}
 
 				fwrite(swbuf, sizeof(uint16_t), n_channels, f);
@@ -122,7 +122,7 @@ bool filterbank::read_header() {
 		return false;
 	}
 
-	unsigned int keylen = 0;
+	uint32_t keylen = 0;
 	char* buffer = read_string(keylen);
 	const std::string initial(buffer);
 
@@ -204,10 +204,10 @@ bool filterbank::read_data() {
 	auto n_bytes_to_skip = (start_sample * n_ifs * header["nchans"].val.i);
 	fseek(f, n_bytes_to_skip, SEEK_CUR);
 
-		for (unsigned int sample = 0; sample < n_samples; sample ++) {
-		for (unsigned int interface = 0; interface < n_ifs; interface++) {
-			int start_bytes_to_skip = start_channel * n_bytes;
-			int end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
+		for (uint32_t sample = 0; sample < n_samples; sample ++) {
+		for (uint32_t interface = 0; interface < n_ifs; interface++) {
+			int32_t start_bytes_to_skip = start_channel * n_bytes;
+			int32_t end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
 
 			//Skip the amount of channels we're not interested in
 			fseek(f, start_bytes_to_skip, SEEK_CUR);
@@ -222,26 +222,26 @@ bool filterbank::read_data() {
 	return true;
 }
 
-unsigned int filterbank::read_block(uint16_t nbits, float* block, unsigned int nread) {
+uint32_t filterbank::read_block(uint16_t nbits, float* block, uint32_t nread) {
 	size_t samples_read = 0;
-	unsigned char* charblock = nullptr;
-	unsigned short* shortblock = nullptr;
-	unsigned int sample = 0;
+	uint8_t* charblock = nullptr;
+	uint16_t* shortblock = nullptr;
+	uint32_t sample = 0;
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (nbits) {
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		charblock = new unsigned char[nread];
+		charblock = new uint8_t[nread];
 		samples_read = fread(charblock, 1, nread, f);
-		for (unsigned int i = 0; i < nread; i++) {
+		for (uint32_t i = 0; i < nread; i++) {
 			block[i] = (float)charblock[i];
 		}
 		break;
 
 	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		shortblock = new unsigned short[(((uint64_t)nread) * 2)];
+		shortblock = new uint16_t[(((uint64_t)nread) * 2)];
 		samples_read = fread(shortblock, 2, nread, f);
-		for (unsigned int i = 0; i < samples_read; i++) {
+		for (uint32_t i = 0; i < samples_read; i++) {
 			block[i] = (float)shortblock[i];
 		}
 		break;
@@ -253,11 +253,11 @@ unsigned int filterbank::read_block(uint16_t nbits, float* block, unsigned int n
 	delete[] charblock;
 	delete[] shortblock;
 
-	return (unsigned int)samples_read;
+	return (uint32_t)samples_read;
 
 }
 
-void filterbank::setup_frequencies(unsigned int startchan, unsigned int endchan) {
+void filterbank::setup_frequencies(uint32_t startchan, uint32_t endchan) {
 	double channel_bandwith = header["foff"].val.d;
 	double start_frequency = header["fch1"].val.d;
 
@@ -270,19 +270,19 @@ void filterbank::setup_frequencies(unsigned int startchan, unsigned int endchan)
 		: header["nchans"].val.i;
 
 
-	for (unsigned int i = 0; i < n_channels; i++) {
+	for (uint32_t i = 0; i < n_channels; i++) {
 		frequencies.push_back(i * channel_bandwith + start_frequency);
 	}
 
 	n_channels = int(f_stop - f_start);
-	start_channel = (unsigned int)std::min(f_start, f_stop);
-	end_channel = (unsigned int)std::max(f_start, f_stop);
+	start_channel = (uint32_t)std::min(f_start, f_stop);
+	end_channel = (uint32_t)std::max(f_start, f_stop);
 
 	//recalculate number of values
 	n_values = n_ifs * n_channels * n_samples;
 }
 
-void  filterbank::setup_time(unsigned int start, unsigned int end) {
+void  filterbank::setup_time(uint32_t start, uint32_t end) {
 	double sample_interval = header["tsamp"].val.d;
 	double time_start = header["tstart"].val.d;
 
@@ -300,7 +300,7 @@ void  filterbank::setup_time(unsigned int start, unsigned int end) {
 
 	n_samples = end_sample - start_sample;
 
-	for (unsigned int i = 0; i < n_samples; i++) {
+	for (uint32_t i = 0; i < n_samples; i++) {
 		timestamps.push_back(i * sample_interval / 24. / 60. / 60 + time_start);
 	}
 
@@ -309,13 +309,13 @@ void  filterbank::setup_time(unsigned int start, unsigned int end) {
 
 }
 
-unsigned int filterbank::read_key_size() {
-	unsigned int keylen;
+uint32_t filterbank::read_key_size() {
+	uint32_t keylen;
 	fread(&keylen, sizeof(keylen), 1, f);
 	return keylen;
 }
 
-char* filterbank::read_string(unsigned int& keylen) {
+char* filterbank::read_string(uint32_t& keylen) {
 	fread(&keylen, sizeof(uint32_t), 1, f);
 	char* buffer = new char[(((uint64_t)keylen) + 1)]{ '\0' };
 	fread(buffer, sizeof(char), keylen, f);
@@ -323,7 +323,7 @@ char* filterbank::read_string(unsigned int& keylen) {
 }
 
 void filterbank::write_string(std::string string) {
-	unsigned int len = string.length();
+	uint32_t len = string.length();
 	//Write the length of our string
 	fwrite(&len, sizeof(int), 1, f);
 	//then write the actual string
