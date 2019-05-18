@@ -1,4 +1,4 @@
-#include "filterbank.h"
+#include "filterbank-core.h"
 
 std::map<uint16_t, std::string> filterbank::telescope_ids = {
 	{ 0, "Fake" }, { 1, "Arecibo" }, { 1, "Ooty" },
@@ -75,12 +75,11 @@ void filterbank::save_filterbank(bool save_header) {
 
 	for (uint32_t sample = 0; sample < n_samples; ++sample) {
 		for (uint32_t interface = 0; interface < n_ifs; ++interface) {
+			// Get the index for the interface
 			int32_t index = (sample * n_ifs * n_channels) + (interface * n_channels);
 			switch (n_bytes) {
 			case 1: {
-				char* cwbuf = new char[n_channels] {0};
-				// Get the index for the interface
-
+				std::unique_ptr<char[]> cwbuf = std::make_unique(char[n_channels] {0});
 				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
 					cwbuf[channel - start_channel] = (char)data[index + channel];
 				}
@@ -89,7 +88,7 @@ void filterbank::save_filterbank(bool save_header) {
 				break;
 			}
 			case 2: {
-				uint16_t* swbuf = new uint16_t[n_channels]{ 0 };
+				std::unique_ptr<uint16_t[]> swbuf = std::make_unique(uint16_t[n_channels] {0});
 				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
 					swbuf[channel - start_channel] = (uint16_t)data[index + channel];
 				}
@@ -195,7 +194,7 @@ bool filterbank::read_data() {
 	}
 
 	// Allocate a block of data
-	data = new float[n_values];
+	data = std::make_unique(float[n_values]);
 
 	// Skip the header
 	fseek(f, header_size, SEEK_SET);
@@ -224,14 +223,12 @@ bool filterbank::read_data() {
 
 uint32_t filterbank::read_block(uint16_t nbits, float* block, uint32_t nread) {
 	size_t samples_read = 0;
-	uint8_t* charblock = nullptr;
-	uint16_t* shortblock = nullptr;
 	uint32_t sample = 0;
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (nbits) {
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		charblock = new uint8_t[nread];
+		std::unique_ptr<uint8_t[]> charblock = std::make_unique(uint8_t[nread]);
 		samples_read = fread(charblock, 1, nread, f);
 		for (uint32_t i = 0; i < nread; i++) {
 			block[i] = (float)charblock[i];
@@ -239,7 +236,7 @@ uint32_t filterbank::read_block(uint16_t nbits, float* block, uint32_t nread) {
 		break;
 
 	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		shortblock = new uint16_t[(((uint64_t)nread) * 2)];
+		std::unique_ptr<uint16_t> shortblock = std::make_unique(uint16_t[(((uint64_t)nread) * 2)]);
 		samples_read = fread(shortblock, 2, nread, f);
 		for (uint32_t i = 0; i < samples_read; i++) {
 			block[i] = (float)shortblock[i];
@@ -317,12 +314,13 @@ uint32_t filterbank::read_key_size() {
 
 char* filterbank::read_string(uint32_t& keylen) {
 	fread(&keylen, sizeof(uint32_t), 1, f);
-	char* buffer = new char[(((uint64_t)keylen) + 1)]{ '\0' };
-	fread(buffer, sizeof(char), keylen, f);
+
+	  char* buffer = new char[(((uint64_t)keylen) + 1)]{ '\0' };
+	std::fread(buffer, sizeof(char), keylen, f);
 	return buffer;
 }
 
-void filterbank::write_string(std::string string) {
+void filterbank::write_string(const std::string string) {
 	uint32_t len = string.length();
 	//Write the length of our string
 	fwrite(&len, sizeof(int), 1, f);
@@ -339,10 +337,7 @@ T filterbank::read_value() {
 }
 
 template <typename T>
-void filterbank::write_value(std::string key, T value) {
-	//If there's a key, associated with the value(eg: header parameters) write the key
-	// std::cout << "Key:\t" << key.c_str() << "\t\t Value:\t" << value << "\n";
-	// write_string((char*)key.c_str(), key.length());
+void filterbank::write_value(const std::string key, T value) {
 	write_string(key);
 	fwrite(&value, sizeof(T), 1, f);
 	fflush(f);

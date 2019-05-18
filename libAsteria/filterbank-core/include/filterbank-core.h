@@ -11,6 +11,8 @@
 #include <ctime>
 #include <cstdio>
 #include <cstring>
+#include <vector>
+#include <memory>
 #include "HeaderParam.h"
 
 class filterbank {
@@ -69,7 +71,7 @@ public:
 
 	std::list<double> timestamps;
 	std::list<double> frequencies;
-	float* data;
+	std::unique_ptr<float[]> data;
 	std::string filename;
 
 private:
@@ -90,8 +92,8 @@ private:
 	uint32_t read_block(uint16_t nbits, float* block, uint32_t nread);
 
 	template <typename T>
-	void write_value(std::string key, T value);
-	void write_string(std::string string);
+	void write_value(const std::string key, T value);
+	void write_string(const std::string string);
 };
 
 #endif // !FILTERBANK_H
