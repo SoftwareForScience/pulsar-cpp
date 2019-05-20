@@ -24,7 +24,7 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	fb.filename = filename;
 
 	if (!fb.read_header()) {
-		throw "Invalid filterbank file";
+		throw "Invalid filterbank-core file";
 	}
 
 	fb.setup_time(false, false);
@@ -127,7 +127,7 @@ bool filterbank::read_header() {
 	const std::string initial(buffer);
 
 	if (initial.compare("HEADER_START")) {
-		// if this isn't present, the file is not a valid filterbank file.
+		// if this isn't present, the file is not a valid filterbank-core file.
 		return false;
 	}
 

@@ -36,9 +36,9 @@ public:
 		{"tsamp", DOUBLE}, // time interval between samples
 		{"nbits", INT}, // number of bits per time sample
 		{"nsamples", INT}, // number of time samples in the data file
-		{"fch1", DOUBLE}, // centre frequency of first filterbank channel
-		{"foff", DOUBLE}, // filterbank channel bandwith
-		{"nchans", INT}, // number of filterbank channels
+		{"fch1", DOUBLE}, // centre frequency of first filterbank-core channel
+		{"foff", DOUBLE}, // filterbank-core channel bandwith
+		{"nchans", INT}, // number of filterbank-core channels
 		{"nifs", INT}, // number of seperate if channels
 		{"refdm", DOUBLE}, // reference dispersion measure
 		{"period", DOUBLE}, // folding period (s)

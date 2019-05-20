@@ -114,7 +114,7 @@ float find_estimation_intensity(filterbank& fb, uint32_t highest_x)
 void dedisperse_help() /*includefile*/
 {
 	std::cout << std::endl;
-	std::cout << ("dedisperse  - form time series from filterbank data or profile from folded data") << std::endl << std::endl;
+	std::cout << ("dedisperse  - form time series from filterbank-core data or profile from folded data") << std::endl << std::endl;
 	std::cout << ("usage: dedisperse {filename} -{options}") << std::endl << std::endl;
 	std::cout << ("options:") << std::endl << std::endl;
 	std::cout << ("   filename - full name of the raw data file to be read (def=stdin)") << std::endl;
