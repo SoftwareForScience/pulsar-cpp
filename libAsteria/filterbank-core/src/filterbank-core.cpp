@@ -1,4 +1,4 @@
-#include "filterbank.h"
+#include "filterbank-core.h"
 
 std::map<uint16_t, std::string> filterbank::telescope_ids = {
 	{ 0, "Fake" }, { 1, "Arecibo" }, { 1, "Ooty" },
