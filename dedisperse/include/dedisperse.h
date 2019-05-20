@@ -2,7 +2,7 @@
 #define DEDISPERSE_H
 
 #include <queue>
-#include "filterbank.h"
+#include "filterbank-core.h"
 #include "linspaced.h"
 
 

@@ -79,21 +79,21 @@ void filterbank::save_filterbank(bool save_header) {
 			int32_t index = (sample * n_ifs * n_channels) + (interface * n_channels);
 			switch (n_bytes) {
 			case 1: {
-				std::unique_ptr<char[]> cwbuf = std::make_unique(char[n_channels] {0});
+				std::vector<char>cwbuf(n_channels);
 				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
-					cwbuf[channel - start_channel] = (char)data[index + channel];
+					cwbuf[channel - start_channel] = (char)data[((uint64_t)index) + channel];
 				}
 
-				fwrite(cwbuf, sizeof(char), n_channels, f);
+				fwrite(&cwbuf[0], sizeof(char), n_channels, f);
 				break;
 			}
 			case 2: {
-				std::unique_ptr<uint16_t[]> swbuf = std::make_unique(uint16_t[n_channels] {0});
+				std::vector<uint16_t>swbuf(n_channels);
 				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
-					swbuf[channel - start_channel] = (uint16_t)data[index + channel];
+					swbuf[channel - start_channel] = (uint16_t)data[((uint64_t)index) + channel];
 				}
 
-				fwrite(swbuf, sizeof(uint16_t), n_channels, f);
+				fwrite(&swbuf[0], sizeof(uint16_t), n_channels, f);
 
 				break;
 			}
@@ -110,7 +110,7 @@ void filterbank::save_filterbank(bool save_header) {
 
 filterbank::filterbank() {
 	f = NULL;
-	data = new float[0];
+	data = std::vector<float>(0);
 }
 
 bool filterbank::read_header() {
@@ -194,7 +194,7 @@ bool filterbank::read_data() {
 	}
 
 	// Allocate a block of data
-	data = std::make_unique(float[n_values]);
+	data = std::vector<float>(n_values);
 
 	// Skip the header
 	fseek(f, header_size, SEEK_SET);
@@ -210,7 +210,7 @@ bool filterbank::read_data() {
 
 			//Skip the amount of channels we're not interested in
 			fseek(f, start_bytes_to_skip, SEEK_CUR);
-			n_bytes_read += read_block(header["nbits"].val.i, (data + n_bytes_read), n_channels);
+			n_bytes_read += read_block(header["nbits"].val.i, &data[n_bytes_read], n_channels);
 			//Skip the last few channels
 			fseek(f, end_bytes_to_skip , SEEK_CUR);
 		}
@@ -221,23 +221,23 @@ bool filterbank::read_data() {
 	return true;
 }
 
-uint32_t filterbank::read_block(uint16_t nbits, float* block, uint32_t nread) {
+uint32_t filterbank::read_block(uint16_t nbits, float* block, const uint32_t nread) {
 	size_t samples_read = 0;
 	uint32_t sample = 0;
+	std::vector<uint8_t> charblock(nread);
+	std::vector<uint16_t> shortblock(nread);
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (nbits) {
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		std::unique_ptr<uint8_t[]> charblock = std::make_unique(uint8_t[nread]);
-		samples_read = fread(charblock, 1, nread, f);
+		samples_read = fread(&charblock, 1, nread, f);
 		for (uint32_t i = 0; i < nread; i++) {
 			block[i] = (float)charblock[i];
 		}
 		break;
 
 	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		std::unique_ptr<uint16_t> shortblock = std::make_unique(uint16_t[(((uint64_t)nread) * 2)]);
-		samples_read = fread(shortblock, 2, nread, f);
+		samples_read = fread(&shortblock, 2, nread, f);
 		for (uint32_t i = 0; i < samples_read; i++) {
 			block[i] = (float)shortblock[i];
 		}
@@ -246,9 +246,6 @@ uint32_t filterbank::read_block(uint16_t nbits, float* block, uint32_t nread) {
 		samples_read = fread(block, sizeof(float), nread, f);
 		break;
 	}
-
-	delete[] charblock;
-	delete[] shortblock;
 
 	return (uint32_t)samples_read;
 

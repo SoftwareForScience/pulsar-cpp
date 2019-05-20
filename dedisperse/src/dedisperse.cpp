@@ -5,7 +5,6 @@ int32_t main(int32_t argc, char* argv[]) {
 	if (argList.size() < 1)
 		dedisperse_help();
 
-	//std::string filename = argList[1];
 	std::string filename = argv[1];
 
 	auto fb = filterbank::read_filterbank(filename);
@@ -73,7 +72,7 @@ float find_dispersion_measure(filterbank& fb, float pulsar_intensity, double max
 		int32_t sample_index = (sample * fb.n_ifs * fb.n_channels);
 		for (uint32_t channel = 0; channel < fb.n_channels; ++channel) {
 			//if the sample meets the minimum intensity, attempt to find a line continueing from the intensity
-			if (fb.data[sample_index + channel] > pulsar_intensity) {
+			if (fb.data[((uint64_t)sample_index) + channel] > pulsar_intensity) {
 				start_sample_index = sample;
 
 				//attempt to find a line, line_coordinates contains the first and last index of the pulsar
@@ -95,10 +94,10 @@ float find_estimation_intensity(filterbank& fb, uint32_t highest_x)
 
 		std::priority_queue<float> q;
 		for (uint32_t channel = 0; channel < fb.n_channels; ++channel) {
-			q.push(fb.data[sample_index + channel]);
+			q.push(fb.data[((uint64_t)sample_index) + channel]);
 		}
 
-		for (int32_t i = 0; i < highest_x; ++i) {
+		for (uint32_t i = 0; i < highest_x; ++i) {
 			float val = q.top();
 			sum_intensities += val;
 			q.pop();

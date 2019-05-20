@@ -71,7 +71,7 @@ public:
 
 	std::list<double> timestamps;
 	std::list<double> frequencies;
-	std::unique_ptr<float[]> data;
+	std::vector<float> data;
 	std::string filename;
 
 private:

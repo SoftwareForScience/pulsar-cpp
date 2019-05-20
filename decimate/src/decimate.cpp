@@ -77,10 +77,10 @@ int32_t main(int32_t argc, char* argv[]) {
 		exit(-3);
 	}
 
-	if (num_chans) {
+	if (num_chans > 1) {
 		decimate_channels(fb, num_chans);
 	}
-	if (num_samps) {
+	if (num_samps > 1) {
 		decimate_samples(fb, num_samps);
 	}
 
@@ -92,7 +92,7 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 	uint32_t n_channels_out = fb.n_channels / n_channels_to_combine;
 	uint32_t n_values_out = fb.n_ifs * n_channels_out * fb.n_samples;
 
-	float* temp = new float[n_values_out];
+	std::vector<float> temp(n_values_out);
 
 	for (uint32_t sample = fb.start_sample; sample < fb.end_sample; sample++) {
 		for (uint32_t interface = 0; interface < fb.n_ifs; interface++) {
@@ -124,7 +124,7 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	uint32_t n_samples_out = fb.n_samples / n_samples_to_combine;
 	uint32_t n_values_out = fb.n_ifs * fb.n_channels * n_samples_out;
 
-	float* temp = new float[n_values_out];
+	std::vector<float> temp(n_values_out);
 
 	for (uint32_t channel = fb.start_channel; channel < fb.end_channel; channel++) {
 		for (uint32_t interface = 0; interface < fb.n_ifs; interface++) {

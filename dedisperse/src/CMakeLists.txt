@@ -4,8 +4,8 @@ set (CMAKE_CXX_STANDARD 11)
 project ("dedisperse")
 
 include_directories("../include")
-include_directories("../../filterbank/include")
+include_directories("../../libAsteria/filterbank-core/include")
 
 add_executable(dedisperse "./dedisperse.cpp")
 
-target_link_libraries(dedisperse filterbank)
+target_link_libraries(dedisperse filterbank-core)
