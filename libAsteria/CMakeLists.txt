@@ -1,2 +1,2 @@
-﻿add_subdirectory("IO/src")
-add_subdirectory("filterbank-core/src")
+﻿add_subdirectory("IO")
+add_subdirectory("filterbank-core")
