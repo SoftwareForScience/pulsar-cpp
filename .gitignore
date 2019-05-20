@@ -66,3 +66,5 @@ ipch/
 /data
 /out
 
+# CLion
+cmake-build-debug/
