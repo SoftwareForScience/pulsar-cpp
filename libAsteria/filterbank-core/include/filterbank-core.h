@@ -11,8 +11,6 @@
 #include <ctime>
 #include <cstdio>
 #include <cstring>
-#include <vector>
-#include <memory>
 #include "HeaderParam.h"
 
 class filterbank {
@@ -38,9 +36,9 @@ public:
 		{"tsamp", DOUBLE}, // time interval between samples
 		{"nbits", INT}, // number of bits per time sample
 		{"nsamples", INT}, // number of time samples in the data file
-		{"fch1", DOUBLE}, // centre frequency of first filterbank channel
-		{"foff", DOUBLE}, // filterbank channel bandwith
-		{"nchans", INT}, // number of filterbank channels
+		{"fch1", DOUBLE}, // centre frequency of first filterbank-core channel
+		{"foff", DOUBLE}, // filterbank-core channel bandwith
+		{"nchans", INT}, // number of filterbank-core channels
 		{"nifs", INT}, // number of seperate if channels
 		{"refdm", DOUBLE}, // reference dispersion measure
 		{"period", DOUBLE}, // folding period (s)
@@ -71,7 +69,7 @@ public:
 
 	std::list<double> timestamps;
 	std::list<double> frequencies;
-	std::unique_ptr<float[]> data;
+	float* data;
 	std::string filename;
 
 private:
@@ -92,8 +90,8 @@ private:
 	uint32_t read_block(uint16_t nbits, float* block, uint32_t nread);
 
 	template <typename T>
-	void write_value(const std::string key, T value);
-	void write_string(const std::string string);
+	void write_value(std::string key, T value);
+	void write_string(std::string string);
 };
 
 #endif // !FILTERBANK_H
