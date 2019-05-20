@@ -31,7 +31,7 @@ CMakeScripts
 Testing
 Makefile
 cmake_install.cmake
-			 
+build/
 
 # User-specific files
 *.rsuser
@@ -66,3 +66,5 @@ ipch/
 /data
 /out
 
+# CLion
+cmake-build-debug/

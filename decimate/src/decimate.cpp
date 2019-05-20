@@ -158,11 +158,11 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 
 void show_usage(std::string name) {
 	std::cerr
-		<< name << " - reduce time and/or frequency resolution of filterbank data\n" << std::endl
+		<< name << " - reduce time and/or frequency resolution of filterbank-core data\n" << std::endl
 		<< "usage: " << name << "{filename} -{options}\n" << std::endl
 		<< "options: \n" << std::endl
-		<< "   filename - filterbank data file (def=stdin)" << std::endl
-		<< "-o filename - output filterbank data file" << std::endl
+		<< "   filename - filterbank-core data file (def=stdin)" << std::endl
+		<< "-o filename - output filterbank-core data file" << std::endl
 		<< "-c numchans - number of channels to add (def=all)" << std::endl
 		<< "-t numsamps - number of time samples to add (def=none)" << std::endl
 		<< "-T numsamps - (alternative to -t) specify numberof output timesamples" << std::endl
