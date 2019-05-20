@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "filterbank.h"
+#include "filterbank-core.h"
 #include "fileutils.h"
 
 void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine);
