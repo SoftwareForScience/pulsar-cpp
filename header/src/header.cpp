@@ -36,11 +36,13 @@ int main(int argc, char* argv[])
 	std::cout << "Source Name                      : " << fb.header["source_name"].val.s << "\n";
 
 
-	// TODO: print this properly 
-	/*if (fb.header["src_raj"].val.d)
+	// TODO: print this properly
+
+
+	if (fb.header["src_raj"].val.d)
 		printf("Source RA (J2000)                : %02d:%02d:%s\n", rah, ram, sra);
 	if (fb.header["src_raj"].val.d)
-		printf("Source DEC (J2000)               : %c%02d:%02d:%s\n", decsign, abs(ded), dem, sde);*/
+		printf("Source DEC (J2000)               : %c%02d:%02d:%s\n", decsign, abs(ded), dem, sde);
 
 	if (fb.header["az_start"].val.d)
 		std::cout << "Start AZ (deg)                   : " << fb.header["az_start"].val.d << "\n";
