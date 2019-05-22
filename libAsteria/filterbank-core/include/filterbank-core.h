@@ -13,6 +13,7 @@
 #include <cstring>
 #include <vector>
 #include "HeaderParam.h"
+#include <vector>
 
 class filterbank {
 public:
