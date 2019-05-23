@@ -2,89 +2,123 @@
 
 int32_t main(int32_t argc, char* argv[]) {
 
-	std::vector<std::string> argList(argv, argv + argc);
-	if (argList.size() < 2) {
-		show_usage(argList[0]);
-		exit(-1);
-	}
+    //BEGIN LEGACY
+    //-headerless is not a valid switch, changing it to --headerless.
+    int count = 0;
+    std::vector<std::string> arguments(argv, argv + argc);
+    for (std::string &s : arguments)
+    {
+        if (!s.compare("-headerless"))
+        {
+            argv[count] = "--headerless";
+        }
+        count++;
+    }
+    //ENDLEGACY
+    try {
+        po::options_description desc("\ndecimate - reduce time and/or frequency resolution of filterbank data\n\n\
+usage: decimate {filename} -{options}\n\noptions");
+        desc.add_options()
+			("help,h", "produce this help message")
+			("filename", po::value<std::string>()->required()->value_name("FILE"), "filterbank data file (def=stdin)")
+			(",o", po::value<std::string>()->value_name("FILE"), "filterbank output file (def=stdout)")
+			(",c", po::value<int>()->value_name("numchans"), "number of channels to add (def=all)")
+            (",t", po::value<int>()->value_name("numsamps"), "number of time samples to add (def=none)")
+            (",T", po::value<int>()->value_name("numsamps"), "(alternative to -t) specify number of output timesamples")
+            (",n", po::value<int>()->value_name("numbits"), "specify output number of bits (def=input)")
+            ("headerless", "do not broadcast resulting header (def=broadcast)");
 
-	int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;
-	bool save_header = true;
-	std::string outputFile = "";
-	filterbank fb;
+        po::positional_options_description positionalOptions;
+        positionalOptions.add("filename", 1);
 
-	if (asteria::file_exists(argList[1])) {
-		std::string filename = argList[1];
-		fb = filterbank::read_filterbank(filename);
-		fb.read_data();
-	}
+        po::variables_map vm;
 
-	// TODO: Check if file starts with HEADER_START, if so, use the file.
-	else {
-		show_usage("Decimate");
-		std::cerr << "file: " << argList[1] << " does not exist\n";
-		exit(-1);
-	}
-	//TODO: Better error handling
-	for (int32_t i = 2; i < argList.size(); i++) {
-		if (!argList[i].compare("-c")) {
-			num_chans = atoi(argv[++i]);
-			if (num_chans <= 0) {
-				show_usage("Decimate");
-				std::cerr << "Number of channels must be greater than 0\n";
-				exit(-1);
-			}
+		try { 
+			po::store(po::command_line_parser(argc, argv).options(desc) 
+				.positional(positionalOptions).run(), 
+				vm);
+
+			if (vm.count("help")) { 
+				std::cout << desc << std::endl;
+				return SUCCESS; 
+			} 
+
+			po::notify(vm);
+
+			} 
+		catch (boost::program_options::required_option& ex_required) { 
+			std::cerr << ex_required.what() << std::endl;
+			return ERROR_IN_COMMAND_LINE; 
+		} 
+		catch (const po::error &ex) {
+			std::cerr << ex.what() << std::endl;
+			return ERROR_IN_COMMAND_LINE; 
 		}
-		else if (!argList[i].compare("-o")) {
-			fb.filename = argList[++i];
+
+		int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;		
+		bool save_header = true;
+		std::string inputFile = vm["filename"].as<std::string>();
+		std::string outputFile = "";
+		filterbank fb;
+		std::vector<std::string> argList(argv, argv + argc);
+
+		if (asteria::file_exists(inputFile)) {
+			//Change or remove std::string filename
+			fb = filterbank::read_filterbank(inputFile);
+			fb.read_data();
 		}
-		else if (!argList[i].compare("-t")) {
-			num_samps = atoi(argv[++i]);
-			if (num_samps <= 0) {
-				show_usage("Decimate");
-				std::cerr << "Number of samples must be greater than 0\n";
-				exit(-1);
-			}
-		}
-		else if (!argList[i].compare("-T")) {
-			num_output_samples = atoi(argv[++i]);
-			if (num_output_samples <= 0) {
-				show_usage("Decimate");
-				std::cerr << "Number of output timesamples must be greater than 0\n";
-				exit(-1);
-			}
-			num_samps = fb.n_samples / num_output_samples;
-		}
-		else if (!argList[i].compare("-n")) {
-			fb.header["nbits"].val.i = atoi(argv[++i]);
-		}
-		else if (!argList[i].compare("-headerless")) {
-			save_header = false;
-		}
+
+		// TODO: Check if file starts with HEADER_START, if so, use the file.
 		else {
-			show_usage("Decimate");
-			std::cerr << "unknown argument " << argv[i] << " passed to decimate\n";
-			exit(-2);
+			//TODO: Add way to read from stdin
+			std::cerr << "file: " << inputFile << " does not exist\n";
+			return ERROR_UNHANDLED_EXCEPTION;
 		}
-	}
 
-	if (fb.n_channels % num_chans) {
-		std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
-		exit(-3);
-	}
-	if (fb.n_samples % num_samps) {
-		std::cerr << "File does not contain a multiple of: " << num_samps << " samples.\n";
-		exit(-3);
-	}
+		//Checking for optional switches
+		if (vm.count("-o"))
+        {
+            fb.filename = vm["-o"].as<std::string>();
+        }
+		if (vm.count("-c"))
+        {
+			num_chans = vm["-c"].as<int32_t>();
+        }
+		if (vm.count("-t"))
+        {
+            num_samps = vm["-t"].as<int32_t>();
+        }
+		if (vm.count("-T"))
+        {
+			num_output_samples = vm["-T"].as<int32_t>();
+        }
+		if (vm.count("-n"))
+        {
+            fb.header["nbits"].val.i = vm["-n"].as<int32_t>();;
+        }
+		//headerless = vm.count("headerless")
+		if (vm.count("headerless"))
+        {
+            save_header = false;
+        }
 
-	if (num_chans > 1) {
+		if (num_chans < 1 || fb.n_channels % num_chans) {
+			std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
+			exit(-3);
+		}
+		if (num_samps < 1 || fb.n_samples % num_samps) {
+			std::cerr << "File does not contain a multiple of: " << num_samps << " samples.\n";
+			exit(-3);
+		}
+
 		decimate_channels(fb, num_chans);
-	}
-	if (num_samps > 1) {
 		decimate_samples(fb, num_samps);
-	}
+		fb.save_filterbank(save_header);
 
-	fb.save_filterbank(save_header);
+	}
+	catch (const po::error &ex) {
+		std::cerr << ex.what() << '\n';
+    }
 }
 
 void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
@@ -154,18 +188,4 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	// if we decrease the amount of samples, the time between samples increase
 	fb.header["tsamp"].val.d = fb.header["tsamp"].val.d * n_samples_to_combine;
 	fb.data = temp;
-}
-
-void show_usage(std::string name) {
-	std::cerr
-		<< name << " - reduce time and/or frequency resolution of filterbank-core data\n" << std::endl
-		<< "usage: " << name << "{filename} -{options}\n" << std::endl
-		<< "options: \n" << std::endl
-		<< "   filename - filterbank-core data file (def=stdin)" << std::endl
-		<< "-o filename - output filterbank-core data file" << std::endl
-		<< "-c numchans - number of channels to add (def=all)" << std::endl
-		<< "-t numsamps - number of time samples to add (def=none)" << std::endl
-		<< "-T numsamps - (alternative to -t) specify numberof output timesamples" << std::endl
-		<< "-n numbits  - specify output numberof bits(def=input)" << std::endl
-		<< "-headerless - do not broadcast resulting header(def=broadcast)" << std::endl;
 }
