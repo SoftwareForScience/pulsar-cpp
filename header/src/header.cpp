@@ -1,6 +1,7 @@
 #include "header.h"
 
 
+//  TODO: Optimize function
 void julToGreg ( int ndp, double djm, int iymdf[4], int *j ) /*includefile*/
 /*
 **  - - - - - - - - -
@@ -71,79 +72,11 @@ void julToGreg ( int ndp, double djm, int iymdf[4], int *j ) /*includefile*/
     }
 }
 
-void slaDjcal ( int ndp, double djm, int iymdf[4], int *j ) /*includefile*/
-/*
-**  - - - - - - - - -
-**   s l a D j c a l
-**  - - - - - - - - -
-**
-**  Modified Julian Date to Gregorian calendar, expressed
-**  in a form convenient for formatting messages (namely
-**  rounded to a specified precision, and with the fields
-**  stored in a single array).
-**
-**  Given:
-**     ndp      int       number of decimal places of days in fraction
-**     djm      double    Modified Julian Date (JD-2400000.5)
-**
-**  Returned:
-**     iymdf    int[4]    year, month, day, fraction in Gregorian calendar
-**     *j       int       status:  nonzero = out of range
-**
-**  Any date after 4701BC March 1 is accepted.
-**
-**  Large ndp values risk internal overflows.  It is typically safe
-**  to use up to ndp=4.
-**
-**  The algorithm is derived from that of Hatcher 1984 (QJRAS 25, 53-55).
-**
-**  Defined in slamac.h:  dmod
-**
-**  Last revision:   17 August 1999
-**
-**  Copyright P.T.Wallace.  All rights reserved.
-*/
-{
-	double fd, df, f, d;
-	long jd, n4, nd10;
-
-/* Validate */
-	if ( ( djm <= -2395520.0 ) || ( djm >= 1.0e9 ) ) {
-		*j = - 1;
-		return;
-	} else {
-
-		/* Denominator of fraction */
-		fd = pow ( 10.0, (double) gmax ( ndp, 0 ) );
-		fd = dnint ( fd );
-
-		/* Round date and express in units of fraction */
-		df = djm * fd;
-		df = dnint ( df );
-
-		/* Separate day and fraction */
-		f = dmod ( df, fd );
-		if ( f < 0.0 ) f += fd;
-		d = ( df - f ) / fd;
-
-		/* Express day in Gregorian calendar */
-		jd = (long) dnint ( d ) + 2400001L;
-		n4 = 4L * ( jd + ( ( 2L * ( ( 4L * jd - 17918L ) / 146097L)
-							 * 3L ) / 4L + 1L ) / 2L - 37L );
-		nd10 = 10L * ( ( ( n4 - 237L ) % 1461L ) / 4L ) + 5L;
-		iymdf[0] = (int) ( ( n4 / 1461L ) - 4712L );
-		iymdf[1] = (int) ( ( ( nd10 / 306L + 2L ) % 12L ) + 1L );
-		iymdf[2] = (int) ( ( nd10 % 306L ) / 10L + 1L );
-		iymdf[3] = (int) dnint ( f );
-		*j = 0;
-	}
-}
-
+//  TODO: Optimize function
 void getGregDate(double djm, int *year, int *month, int *day) /*includefile*/
 {
     int iymdf[4],j;
-    char message[80];
-	slaDjcal(1,djm,iymdf,&j);
+	julToGreg(1,djm,iymdf,&j);
     if (j==0) {
         *year=iymdf[0];
         *month=iymdf[1];
@@ -156,9 +89,9 @@ void getGregDate(double djm, int *year, int *month, int *day) /*includefile*/
 
 int main(int argc, char* argv[]){
 
-	static double tstart;
-	int i,j,year,month,day,check,rah,ram,ded,dem;
-
+	int year,month,day;
+	double tobs;
+	char unit[16];
 
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() == 1) 
@@ -167,8 +100,8 @@ int main(int argc, char* argv[]){
 	std::string filename = argList[1];
 	filterbank fb;
 
-	//auto test = new filterbank_header(filename);
 	try {
+
 		fb = filterbank::read_filterbank(filename);
 	}
 	catch(const char* msg){
@@ -176,7 +109,8 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
-
+    // Read tstart from the filterbank file
+    double tstart = fb.header["tstart"].val.d;
 	getGregDate(tstart,&year,&month,&day);
 	
 
@@ -188,8 +122,12 @@ int main(int argc, char* argv[]){
 		std::cout << "Data type                        : " << fb.header["data_type"].val.i << "(pulsarcentric)\n";
 	else if (fb.header["barycentric"].val.i)
 		std::cout << "Data type                        : " << fb.header["data_type"].val.i << "(barycentric)\n";
-	else
-		std::cout << "Data type                        : " << fb.header["data_type"].val.i << "(topocentric)\n";
+	else {
+	    if (fb.header["data_type"].val.i == 1) {
+            std::cout << "Data type                        : " << "filterbank (topocentric)\n";
+	    } else
+	        std::cout << "Data type                        : " << fb.header["data_type"].val.i << "(topocentric)\n";
+	}
 
 	std::cout << "Telescope                        : " << fb.telescope << "\n";
 	std::cout << "Datataking Machine               : " << fb.backend << "\n";
@@ -197,7 +135,6 @@ int main(int argc, char* argv[]){
 
 
 	// TODO: print this properly
-
 
 //	if (fb.header["src_raj"].val.d)
 //		printf("Source RA (J2000)                : %02d:%02d:%s\n", rah, ram, sra);
@@ -248,24 +185,28 @@ int main(int argc, char* argv[]){
 	if (fb.header["data_type"].val.i != 3)
 		std::cout << "Sample time (us)                 : " << fb.header["tsamp"].val.d * 1.0e6 << "\n";
 
-//	if (datasize && data_type != 3) {
-//		printf("Number of samples                : %lld\n",numsamps);
-//		tobs=(double)numsamps*tsamp;
-//		strcpy(unit,"(seconds)   ");
-//		if (tobs>60.0) {
-//			tobs/=60.0;
-//			strcpy(unit,"(minutes)   ");
-//			if (tobs>60.0) {
-//				tobs/=60.0;
-//				strcpy(unit,"(hours)     ");
-//				if (tobs>24.0) {
-//					tobs/=24.0;
-//					strcpy(unit,"(days)      ");
-//				}
-//			}
-//		}
-//		printf("Observation length %s  : %.1f\n",unit,tobs);
-//	}
+	if (fb.data_size && fb.header["data_type"].val.i != 3) {
+	    std::cout << "Number of samples                : " << fb.header["nsamples"].val.i << std::endl;
+
+	    tobs = (double) fb.header["nsamples"].val.i * fb.header["tsamp"].val.d;
+        strcpy(unit, "(in seconds) ");
+
+//      TODO: clean this up
+	    if (tobs > 60.0) {
+	        tobs/=60.0;
+            strcpy(unit, "(in minutes) ");
+	        if (tobs > 60.0) {
+	            tobs /= 60.0;
+                strcpy(unit, "(in hours) ");
+	            if (tobs > 24) {
+	                tobs /= 24;
+                    strcpy(unit, "(in days) ");
+	            }
+	        }
+	    }
+
+	    std::cout << "Observation length " << unit << " : " << tobs << std::endl;
+    }
 
 	std::cout << "Number of bits per sample        : " << fb.header["nbits"].val.i << "\n";
 	std::cout << "Number of IFs                    : " << fb.header["nifs"].val.i << "\n";
