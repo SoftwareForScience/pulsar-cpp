@@ -1,6 +1,7 @@
 #include "dedisperse.h"
 
 int32_t main(int32_t argc, char* argv[]) {
+	//TODO: parse arguments 
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() < 1)
 		dedisperse_help();
@@ -10,21 +11,27 @@ int32_t main(int32_t argc, char* argv[]) {
 	auto fb = filterbank::read_filterbank(filename);
 	fb.read_data();
 
-	dedisperse(fb, (double)10, (float)10, 10);
+	double dispersion_measure = 6;
+	double max_delay = 10;
 
+	//TODO: Calculate dispersion measure
+	/*if (!dispersion_measure) {
+		float pulsar_intensity = find_estimation_intensity(fb, 10);
+		dispersion_measure = find_dispersion_measure(fb, pulsar_intensity, max_delay);
+	}*/
+
+	dedisperse(fb, dispersion_measure);
+	
+	fb.save_filterbank();
 }
 
 
-void dedisperse(filterbank& fb, double max_delay, float dispersion_measure, uint32_t highest_x)
+void dedisperse(filterbank& fb, float dispersion_measure)
 {
-	if (!dispersion_measure) {
-		float pulsar_intensity = find_estimation_intensity(fb, 10);
-		dispersion_measure = find_dispersion_measure(fb, pulsar_intensity, max_delay);
-	}
-
 	std::vector<double> delays_per_sample = linspace(dispersion_measure, (float)0, (int)fb.n_samples);
 
-	float* temp = new float[fb.n_samples];
+
+	std::vector<float>temp(fb.n_samples) ;
 	for (uint32_t channel = 0; channel < fb.n_channels; channel++) {
 		// fill temp array with the for a single channel
 		for (uint32_t sample = 0; sample < fb.n_samples; sample++)
@@ -33,8 +40,10 @@ void dedisperse(filterbank& fb, double max_delay, float dispersion_measure, uint
 			temp[sample] = fb.data[index];
 		}
 
-		// rotate over the time axis
-		//std::rotate(temp[0], temp[0] + static_cast<float>(delays_per_sample[channel]), temp[fb.n_samples]);
+		auto sample_delay = static_cast<float>(delays_per_sample[channel]);
+		auto mid = temp[0] + sample_delay;
+
+		std::rotate(temp.begin(), temp.begin() + mid, temp.end());
 
 		//write back to array
 		for (uint32_t sample = 0; sample < fb.n_samples; sample++)
@@ -61,6 +70,22 @@ std::pair<uint32_t, uint32_t> find_line(filterbank& fb, uint32_t start_sample, d
 	return std::pair<uint32_t, uint32_t>(0, 0);
 }
 
+float get_disperspion_measure(int nsamples, int nchans, double tsamp, double f0, double df) {
+	float dispersion_measure;
+	float nu1, nu2, nu1_2, nu2_2;
+
+	if (!nsamples) {
+		return (0.0);
+	}
+
+	nu1 = f0;
+	nu2 = f0 + (nchans - 1) * df;
+	nu1_2 = 1.0e6 / (nu1 * nu2);
+	nu2_2 = 1.0e6 / (nu2 * nu2);
+
+	dispersion_measure = (float)nsamples * tsamp / 4.15e-3 * 1.0 / (nu2_2 - nu1_2);
+	return(dispersion_measure);
+}
 
 float find_dispersion_measure(filterbank& fb, float pulsar_intensity, double max_delay)
 {
@@ -103,7 +128,6 @@ float find_estimation_intensity(filterbank& fb, uint32_t highest_x)
 			q.pop();
 		}
 	}
-
 
 	float average_intensity = (sum_intensities / (fb.n_samples * highest_x));
 	return average_intensity;
