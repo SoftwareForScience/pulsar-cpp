@@ -15,110 +15,77 @@ int32_t main(int32_t argc, char* argv[]) {
         count++;
     }
     //ENDLEGACY
-    try {
-        po::options_description desc("\ndecimate - reduce time and/or frequency resolution of filterbank data\n\n\
-usage: decimate {filename} -{options}\n\noptions");
-        desc.add_options()
-			("help,h", "produce this help message")
-			("filename", po::value<std::string>()->required()->value_name("FILE"), "filterbank data file (def=stdin)")
-			(",o", po::value<std::string>()->value_name("FILE"), "filterbank output file (def=stdout)")
-			(",c", po::value<int>()->value_name("numchans"), "number of channels to add (def=all)")
-            (",t", po::value<int>()->value_name("numsamps"), "number of time samples to add (def=none)")
-            (",T", po::value<int>()->value_name("numsamps"), "(alternative to -t) specify number of output timesamples")
-            (",n", po::value<int>()->value_name("numbits"), "specify output number of bits (def=input)")
-            ("headerless", "do not broadcast resulting header (def=broadcast)");
 
-        po::positional_options_description positionalOptions;
-        positionalOptions.add("filename", 1);
+	int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;
+	bool save_header = true;
+	filterbank fb;
+	std::string inputFile = "";
+	std::string outputFile = "";
 
-        po::variables_map vm;
-
-		try { 
-			po::store(po::command_line_parser(argc, argv).options(desc) 
-				.positional(positionalOptions).run(), 
-				vm);
-
-			if (vm.count("help")) { 
-				std::cout << desc << std::endl;
-				return SUCCESS; 
-			} 
-
-			po::notify(vm);
-
-			} 
-		catch (boost::program_options::required_option& ex_required) { 
-			std::cerr << ex_required.what() << std::endl;
-			return ERROR_IN_COMMAND_LINE; 
-		} 
-		catch (const po::error &ex) {
-			std::cerr << ex.what() << std::endl;
-			return ERROR_IN_COMMAND_LINE; 
-		}
-
-		int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;		
-		bool save_header = true;
-		std::string inputFile = vm["filename"].as<std::string>();
-		std::string outputFile = "";
-		filterbank fb;
-		std::vector<std::string> argList(argv, argv + argc);
-
+	CommandLineOptions opts;
+	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
+	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {	
+		inputFile = opts.getInputFile();
+		
 		if (asteria::file_exists(inputFile)) {
-			//Change or remove std::string filename
 			fb = filterbank::read_filterbank(inputFile);
 			fb.read_data();
 		}
-
-		// TODO: Check if file starts with HEADER_START, if so, use the file.
 		else {
 			//TODO: Add way to read from stdin
 			std::cerr << "file: " << inputFile << " does not exist\n";
-			return ERROR_UNHANDLED_EXCEPTION;
+			return 1;
 		}
 
-		//Checking for optional switches
-		if (vm.count("-o"))
-        {
-            fb.filename = vm["-o"].as<std::string>();
-        }
-		if (vm.count("-c"))
-        {
-			num_chans = vm["-c"].as<int32_t>();
-        }
-		if (vm.count("-t"))
-        {
-            num_samps = vm["-t"].as<int32_t>();
-        }
-		if (vm.count("-T"))
-        {
-			num_output_samples = vm["-T"].as<int32_t>();
-        }
-		if (vm.count("-n"))
-        {
-            fb.header["nbits"].val.i = vm["-n"].as<int32_t>();;
-        }
-		//headerless = vm.count("headerless")
-		if (vm.count("headerless"))
-        {
-            save_header = false;
-        }
+		if (opts.getHeaderlessFlag()) {
+			save_header = false;
+		}
 
-		if (num_chans < 1 || fb.n_channels % num_chans) {
+		//TODO: Send to stdout
+		outputFile = opts.getOutputFile();
+		//TODO: Check if folder exists
+		if (asteria::file_exists(outputFile)) {
+			fb.filename = outputFile;
+		} else {
+			fb.filename = inputFile;
+		}
+		
+		num_chans = opts.getNumberOfChannels();
+		num_samps = opts.getNumberOfSamples();
+
+		num_output_samples = opts.getNumberOfOutputSamples();
+		if (num_output_samples > 1) {
+			num_samps = fb.n_samples / num_output_samples;
+		}
+
+		if (opts.getNumberOfBits()) {
+			fb.header["nbits"].val.i = opts.getNumberOfBits();
+		}
+		
+		if (fb.n_channels % num_chans) {
 			std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
 			exit(-3);
 		}
-		if (num_samps < 1 || fb.n_samples % num_samps) {
+		if (fb.n_samples % num_samps) {
 			std::cerr << "File does not contain a multiple of: " << num_samps << " samples.\n";
 			exit(-3);
 		}
 
-		decimate_channels(fb, num_chans);
-		decimate_samples(fb, num_samps);
+		if (num_chans > 1) {
+			decimate_channels(fb, num_chans);
+		}
+		if (num_samps > 1) {
+			decimate_samples(fb, num_samps);
+		}
 		fb.save_filterbank(save_header);
 
 	}
-	catch (const po::error &ex) {
-		std::cerr << ex.what() << '\n';
-    }
+	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
+		//Help printed
+	}
+	else {
+		std::cerr << "Something went wrong." << std::endl;
+	}
 }
 
 void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
