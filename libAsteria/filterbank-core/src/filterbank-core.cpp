@@ -230,14 +230,14 @@ uint32_t filterbank::read_block(uint16_t nbits, float* block, const uint32_t nre
 	/* decide how to read the data based on the number of bits per sample */
 	switch (nbits) {
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		samples_read = fread(&charblock, 1, nread, f);
+		samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), f);
 		for (uint32_t i = 0; i < nread; i++) {
 			block[i] = (float)charblock[i];
 		}
 		break;
 
 	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		samples_read = fread(&shortblock, 2, nread, f);
+		samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), f);
 		for (uint32_t i = 0; i < samples_read; i++) {
 			block[i] = (float)shortblock[i];
 		}
