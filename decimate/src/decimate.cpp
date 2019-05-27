@@ -3,30 +3,40 @@
 int main(int argc, char* argv[]) {
 	filterbank fb;
 	CommandLineOptions opts;
-	handle_arguments(argc, argv, opts);
-	fb = filterbank::read_filterbank(opts.getInputFile());
-	fb.read_data();
-	if ((opts.getOutputFile()).length() != 0) {
-		fb.filename = opts.getOutputFile();
-	} else {
-		fb.filename = opts.getInputFile();
-	}
+	legacy_arguments(argc, argv, opts);
 
-	if (opts.getNumberOfBits()) {
-		fb.header["nbits"].val.i = opts.getNumberOfBits();
-	}
+	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
+	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
+		fb = filterbank::read_filterbank(opts.getInputFile());
+		fb.read_data();
+		if ((opts.getOutputFile()).length() != 0) {
+			fb.filename = opts.getOutputFile();
+		} else {
+			fb.filename = opts.getInputFile();
+		}
 
-	if (opts.getNumberOfOutputSamples()) {
-		decimate_samples(fb, (fb.n_samples / opts.getNumberOfOutputSamples()));
-	}
-	else if (opts.getNumberOfSamples()) {
-		decimate_samples(fb, opts.getNumberOfSamples());
-	}
-	if (opts.getNumberOfChannels()) {
+		// if (opts.getNumberOfBits()) {
+		// 	fb.header["nbits"].val.i = opts.getNumberOfBits();
+		// }
+
+		if (opts.getNumberOfOutputSamples()) {
+			decimate_samples(fb, (fb.n_samples / opts.getNumberOfOutputSamples()));
+		}
+		else {
+			decimate_samples(fb, opts.getNumberOfSamples());
+		}
 		decimate_channels(fb, opts.getNumberOfChannels());
-	}
 
-	fb.save_filterbank(!opts.getHeaderlessFlag());
+		fb.save_filterbank(!opts.getHeaderlessFlag());
+	}
+	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
+		//Help printed
+		//Do something else?
+	}
+	else {
+		std::cerr << "Something went wrong." << std::endl;
+		//do sOmEtHiNg
+	}
 }
 
 void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
@@ -107,7 +117,7 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	fb.data = temp;
 }
 
-void handle_arguments(int argc, char* argv[], CommandLineOptions& opts) {
+void legacy_arguments(int argc, char* argv[], CommandLineOptions& opts) {
 	//BEGIN LEGACY
     //-headerless is not a valid switch, changing it to --headerless.
     int count = 0;
@@ -121,20 +131,4 @@ void handle_arguments(int argc, char* argv[], CommandLineOptions& opts) {
         count++;
     }
     //ENDLEGACY
-
-	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
-	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
-		//Variables all saved successfully 
-		//return something
-	}
-	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
-		//Help printed
-		//return something
-		exit(1);
-	}
-	else {
-		std::cerr << "Something went wrong." << std::endl;
-		//return sOmEtHiNg
-		exit(1);
-	}
 }
