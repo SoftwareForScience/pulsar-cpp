@@ -1,94 +1,39 @@
 #include "decimate.h"
 
-int32_t main(int32_t argc, char* argv[]) {
-
-    //BEGIN LEGACY
-    //-headerless is not a valid switch, changing it to --headerless.
-    int count = 0;
-    std::vector<std::string> arguments(argv, argv + argc);
-    for (std::string &s : arguments)
-    {
-        if (!s.compare("-headerless"))
-        {
-            argv[count] = "--headerless";
-        }
-        count++;
-    }
-    //ENDLEGACY
-
-	int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;
-	bool save_header = true;
+int main(int argc, char* argv[]) {
 	filterbank fb;
-	std::string inputFile = "";
-	std::string outputFile = "";
-
 	CommandLineOptions opts;
-	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
-	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {	
-		inputFile = opts.getInputFile();
-		
-		if (asteria::file_exists(inputFile)) {
-			fb = filterbank::read_filterbank(inputFile);
-			fb.read_data();
-		}
-		else {
-			//TODO: Add way to read from stdin
-			std::cerr << "file: " << inputFile << " does not exist\n";
-			return 1;
-		}
-
-		if (opts.getHeaderlessFlag()) {
-			save_header = false;
-		}
-
-		//TODO: Send to stdout
-		outputFile = opts.getOutputFile();
-		//TODO: Check if folder exists
-		if (asteria::file_exists(outputFile)) {
-			fb.filename = outputFile;
-		} else {
-			fb.filename = inputFile;
-		}
-		
-		num_chans = opts.getNumberOfChannels();
-		num_samps = opts.getNumberOfSamples();
-
-		num_output_samples = opts.getNumberOfOutputSamples();
-		if (num_output_samples > 1) {
-			num_samps = fb.n_samples / num_output_samples;
-		}
-
-		if (opts.getNumberOfBits()) {
-			fb.header["nbits"].val.i = opts.getNumberOfBits();
-		}
-		
-		if (fb.n_channels % num_chans) {
-			std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
-			exit(-3);
-		}
-		if (fb.n_samples % num_samps) {
-			std::cerr << "File does not contain a multiple of: " << num_samps << " samples.\n";
-			exit(-3);
-		}
-
-		if (num_chans > 1) {
-			decimate_channels(fb, num_chans);
-		}
-		if (num_samps > 1) {
-			decimate_samples(fb, num_samps);
-		}
-		fb.save_filterbank(save_header);
-
+	handle_arguments(argc, argv, opts);
+	fb = filterbank::read_filterbank(opts.getInputFile());
+	fb.read_data();
+	if ((opts.getOutputFile()).length() != 0) {
+		fb.filename = opts.getOutputFile();
+	} else {
+		fb.filename = opts.getInputFile();
 	}
-	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
-		//Help printed
+
+	if (opts.getNumberOfBits()) {
+		fb.header["nbits"].val.i = opts.getNumberOfBits();
 	}
-	else {
-		std::cerr << "Something went wrong." << std::endl;
+
+	if (opts.getNumberOfOutputSamples()) {
+		decimate_samples(fb, (fb.n_samples / opts.getNumberOfOutputSamples()));
 	}
+	else if (opts.getNumberOfSamples()) {
+		decimate_samples(fb, opts.getNumberOfSamples());
+	}
+	if (opts.getNumberOfChannels()) {
+		decimate_channels(fb, opts.getNumberOfChannels());
+	}
+
+	fb.save_filterbank(!opts.getHeaderlessFlag());
 }
 
 void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
+	if (n_channels_to_combine < 1 || fb.n_channels % n_channels_to_combine) {
+		std::cerr << "File does not contain a multiple of: " << n_channels_to_combine << " channels.\n";
+		exit(-3);
+	}
 
 	uint32_t n_channels_out = fb.n_channels / n_channels_to_combine;
 	uint32_t n_values_out = fb.n_ifs * n_channels_out * fb.n_samples;
@@ -122,6 +67,11 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 }
 
 void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
+	if (n_samples_to_combine < 1 || fb.n_samples % n_samples_to_combine) {
+		std::cerr << "File does not contain a multiple of: " << n_samples_to_combine << " samples.\n";
+		exit(-3);
+	}
+
 	uint32_t n_samples_out = fb.n_samples / n_samples_to_combine;
 	uint32_t n_values_out = fb.n_ifs * fb.n_channels * n_samples_out;
 
@@ -155,4 +105,36 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	// if we decrease the amount of samples, the time between samples increase
 	fb.header["tsamp"].val.d = fb.header["tsamp"].val.d * n_samples_to_combine;
 	fb.data = temp;
+}
+
+void handle_arguments(int argc, char* argv[], CommandLineOptions& opts) {
+	//BEGIN LEGACY
+    //-headerless is not a valid switch, changing it to --headerless.
+    int count = 0;
+    std::vector<std::string> arguments(argv, argv + argc);
+    for (std::string &s : arguments)
+    {
+        if (!s.compare("-headerless"))
+        {
+            argv[count] = "--headerless";
+        }
+        count++;
+    }
+    //ENDLEGACY
+
+	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
+	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
+		//Variables all saved successfully 
+		//return something
+	}
+	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
+		//Help printed
+		//return something
+		exit(1);
+	}
+	else {
+		std::cerr << "Something went wrong." << std::endl;
+		//return sOmEtHiNg
+		exit(1);
+	}
 }

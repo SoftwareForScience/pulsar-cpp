@@ -1,21 +1,17 @@
 #include "CommandLineOptions.hpp"
 
 CommandLineOptions::CommandLineOptions():
-    myOptions(""),
+    myOptions(),
     myPositionalOptions(),
-    myInputFile(""),
-    myOutputFile(""),
+    myInputFile(),
+    myOutputFile(),
     num_chans(1),
     num_samps(1),
-    num_output_samples(1),
+    num_output_samples(),
+    num_bits(),
     myHeaderlessFlag(false)
 {
     setup();
-}
-
-CommandLineOptions::~CommandLineOptions()
-{
-
 }
 
 void CommandLineOptions::setup() {
@@ -25,11 +21,11 @@ usage: decimate {filename} -{options}\n\noptions");
         ("help,h", "produce this help message")
         ("filename", po::value<std::string>(&myInputFile)->required()->value_name("FILE"), "filterbank data file (def=stdin)")
         (",o", po::value<std::string>(&myOutputFile)->value_name("FILE"), "filterbank output file (def=stdout)")
-        (",c", po::value<int>(&num_chans)->default_value(1)->value_name("numchans"), "number of channels to add (def=all)")
-        (",t", po::value<int>(&num_samps)->default_value(1)->value_name("numsamps"), "number of time samples to add (def=none)")
-        (",T", po::value<int>(&num_output_samples)->default_value(1)->value_name("numsamps"), "(alternative to -t) specify number of output timesamples")
+        (",c", po::value<int>(&num_chans)->value_name("numchans"), "number of channels to add (def=all)")
+        (",t", po::value<int>(&num_samps)->value_name("numsamps"), "number of time samples to add (def=none)")
+        (",T", po::value<int>(&num_output_samples)->value_name("numsamps"), "(alternative to -t) specify number of output timesamples")
         (",n", po::value<int>(&num_bits)->value_name("numbits"), "specify output number of bits (def=input)")
-        ("headerless", po::bool_switch(&myHeaderlessFlag)->default_value(false), "do not broadcast resulting header (def=broadcast)");
+        ("headerless", po::bool_switch(&myHeaderlessFlag), "do not broadcast resulting header (def=broadcast)");
 
     myOptions.add(options);
     myPositionalOptions.add("filename", 1);
@@ -39,7 +35,6 @@ CommandLineOptions::statusReturn_e CommandLineOptions::parse(int argc, char* arg
     statusReturn_e ret = OPTS_SUCCESS;
     
     po::variables_map vm;
-    std::string filename;
 
     try { 
         po::store(po::command_line_parser(argc, argv)

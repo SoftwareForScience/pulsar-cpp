@@ -5,8 +5,6 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 
-#include "decimate.h"
-
 namespace po = boost::program_options;
 
 class CommandLineOptions {
@@ -18,7 +16,6 @@ public:
         ERROR_UNHANDLED_EXCEPTION
     };
     CommandLineOptions();
-    ~CommandLineOptions();
     statusReturn_e parse(int argc, char* argv[]);
 
     inline const std::string & getInputFile() const;
@@ -33,9 +30,6 @@ protected:
     void setup();
 
 private:
-    CommandLineOptions(const CommandLineOptions &rhs);
-    CommandLineOptions &operator=(const CommandLineOptions &rhs);
-
     po::options_description myOptions;
     po::positional_options_description myPositionalOptions;
     std::string myInputFile;
@@ -50,12 +44,12 @@ private:
 inline
 const std::string & CommandLineOptions::getInputFile() const {
     static const std::string emptyString;
-    return (0 < myInputFile.size()) ? myInputFile : emptyString;
+    return (0 < myInputFile.length()) ? myInputFile : emptyString;
 }
 inline
 const std::string & CommandLineOptions::getOutputFile() const {
     static const std::string emptyString;
-    return (0 < myOutputFile.size()) ? myOutputFile : emptyString;
+    return (0 < myOutputFile.length()) ? myOutputFile : emptyString;
 }
 
 
