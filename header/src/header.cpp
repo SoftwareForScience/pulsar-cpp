@@ -2,6 +2,22 @@
 
 double tobs;
 
+void angle_split(double angle, int *dd, int *mm, double *ss) {
+    int negative;
+    if (angle < 0.0) {
+        angle*= -1.0;
+        negative = 1;
+    } else {
+        negative = 0;
+    }
+    *dd = (int) (angle / 10000.0);
+    angle -= (double) (*dd) * 10000.0;
+    *mm = (int) (angle / 100.0);
+    *ss = angle - 100.0* (*mm);
+    if (negative) *dd = *dd * -1;
+}
+
+
 int get_obs_unit() {
 
     int i = 0;
@@ -24,12 +40,15 @@ int get_obs_unit() {
 int main(int argc, char* argv[]){
 
     int index;
+	double ras, des;
+	int rah, ram, ded, dem;
+	char sra[6],sde[6], decsign;
 	std::string unit[4] = {"(seconds)    ", "(minutes)    ", "(hours)      ", "(days)      "};
 
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() == 1) 
 		std::cout << "Please supply a filterbank-core file \n";
-	
+
 	std::string filename = argList[1];
 	filterbank fb;
 
@@ -41,13 +60,37 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
+	// Assign values to rah, ram and ras
+    angle_split(fb.header["src_raj"].val.d,&rah,&ram,&ras);
+
+    // Assign values to ded, dem and des
+    angle_split(fb.header["src_dej"].val.d,&ded,&dem,&des);
+
     // Read tstart from the filterbank file
     double tstart = fb.header["tstart"].val.d;
 
 	// Convert the Modified Julian Date to the gregorian date
     auto gregorian_date = boost::gregorian::gregorian_calendar::from_modjulian_day_number(tstart);
 
-	std::cout << "Data file                        : " << filename << "\n";
+    // TODO: Refractor
+    if (ras<10.0) {
+        sprintf(sra,"0%.1f",ras);
+    } else {
+        sprintf(sra,"%.1f",ras);
+    }
+
+    // TODO: Refractor
+    if (fb.header["src_dej"].val.d > 0.0)
+        decsign = '+';
+    else
+        decsign = '-';
+    if (des<10.0) {
+        sprintf(sde,"0%.1f",des);
+    } else {
+        sprintf(sde,"%.1f",des);
+    }
+
+    std::cout << "Data file                        : " << filename << "\n";
 	std::cout << "Header size (bytes)              : " << fb.header_size << "\n";
 	if (fb.data_size)
 		std::cout << "Data size (bytes)                : " << fb.data_size << "\n";
@@ -66,14 +109,18 @@ int main(int argc, char* argv[]){
 	std::cout << "Datataking Machine               : " << fb.backend << "\n";
 	std::cout << "Source Name                      : " << fb.header["source_name"].val.s << "\n";
 
+	angle_split(fb.header["src_raj"].val.d,&rah,&ram,&ras);
+	if (ras > 10.0)
+	    std::cout << "source RA (J2000)                : " << rah << ":" << ram << ":" << sra << std::endl;
+/*    else
+        std::cout << "ras = " << ras << std::endl;*/
 
-	// TODO: print this properly
-
-//	if (fb.header["src_raj"].val.d)
-//	    std::cout << "source RA (J2000)" <<
-////		printf("Source RA (J2000)                : %02d:%02d:%s\n", rah, ram, sra);
-//	if (fb.header["src_raj"].val.d)
-////		printf("Source DEC (J2000)               : %c%02d:%02d:%s\n", decsign, abs(ded), dem, sde);
+	angle_split(fb.header["src_dej"].val.d,&ded,&dem,&des);
+	if (fb.header["src_dej"].val.d > 0.0)
+		std::cout << "Source DEC (J2000)               : " << decsign << abs(ded) << ":" << dem << ":" << sde
+					<< std::endl;
+/*    else
+        std::cout << "src_dej = " << fb.header["src_dej"].val.d << std::endl;*/
 
 	if (fb.header["az_start"].val.d)
 		std::cout << "Start AZ (deg)                   : " << fb.header["az_start"].val.d << "\n";

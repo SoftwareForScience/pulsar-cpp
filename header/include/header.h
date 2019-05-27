@@ -30,8 +30,8 @@ public:
 
 private:
 
-    void* getGregDate();
-    void* julToGreg();
+    double ras, des;
+    int rah, ram, ded, dem;
 
 
 };
