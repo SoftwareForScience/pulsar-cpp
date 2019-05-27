@@ -1,97 +1,30 @@
 #include "header.h"
 
+double tobs;
 
-//  TODO: Optimize function
-void julToGreg ( int ndp, double djm, int iymdf[4], int *j ) /*includefile*/
-/*
-**  - - - - - - - - -
-**   s l a D j c a l
-**  - - - - - - - - -
-**
-**  Modified Julian Date to Gregorian calendar, expressed
-**  in a form convenient for formatting messages (namely
-**  rounded to a specified precision, and with the fields
-**  stored in a single array).
-**
-**  Given:
-**     ndp      int       number of decimal places of days in fraction
-**     djm      double    Modified Julian Date (JD-2400000.5)
-**
-**  Returned:
-**     iymdf    int[4]    year, month, day, fraction in Gregorian calendar
-**     *j       int       status:  nonzero = out of range
-**
-**  Any date after 4701BC March 1 is accepted.
-**
-**  Large ndp values risk internal overflows.  It is typically safe
-**  to use up to ndp=4.
-**
-**  The algorithm is derived from that of Hatcher 1984 (QJRAS 25, 53-55).
-**
-**  Defined in slamac.h:  dmod
-**
-**  Last revision:   17 August 1999
-**
-**  Copyright P.T.Wallace.  All rights reserved.
-*/
-{
-    double fd, df, f, d;
-    long jd, n4, nd10;
+int get_obs_unit() {
 
-/* Validate */
-    if ( ( djm <= -2395520.0 ) || ( djm >= 1.0e9 ) ) {
-        *j = - 1;
-        return;
-    } else {
-
-        /* Denominator of fraction */
-        fd = pow ( 10.0, (double) std::max(ndp, 0));
-        fd = std::round(fd);
-
-        /* Round date and express in units of fraction */
-        df = djm * fd;
-        df = std::round(df);
-
-
-
-        /* Separate day and fraction */
-        f = dmod ( df, fd );
-        if ( f < 0.0 ) f += fd;
-        d = ( df - f ) / fd;
-
-        /* Express day in Gregorian calendar */
-        jd = (long) std::round(d) + 2400001L;
-        n4 = 4L * ( jd + ( ( 2L * ( ( 4L * jd - 17918L ) / 146097L)
-                             * 3L ) / 4L + 1L ) / 2L - 37L );
-        nd10 = 10L * ( ( ( n4 - 237L ) % 1461L ) / 4L ) + 5L;
-        iymdf[0] = (int) ( ( n4 / 1461L ) - 4712L );
-        iymdf[1] = (int) ( ( ( nd10 / 306L + 2L ) % 12L ) + 1L );
-        iymdf[2] = (int) ( ( nd10 % 306L ) / 10L + 1L );
-        iymdf[3] = (int) std::round(f);
-        *j = 0;
+    int i = 0;
+    if (tobs > 60.0) {
+        tobs/=60.0;
+        i++;
+        if (tobs > 60.0) {
+            tobs /= 60.0;
+            i++;
+            if (tobs > 24) {
+                tobs /= 24;
+                i++;
+            }
+        }
     }
-}
+    return i;
 
-//  TODO: Optimize function
-void getGregDate(double djm, int *year, int *month, int *day) /*includefile*/
-{
-    int iymdf[4],j;
-	julToGreg(1,djm,iymdf,&j);
-    if (j==0) {
-        *year=iymdf[0];
-        *month=iymdf[1];
-        *day=iymdf[2];
-        return;
-    } else {
-        printf("julToGreg could not process MJD: %f",djm);
-    }
 }
 
 int main(int argc, char* argv[]){
 
-	int year,month,day;
-	double tobs;
-	char unit[16];
+    int index;
+	std::string unit[4] = {"(seconds)    ", "(minutes)    ", "(hours)      ", "(days)      "};
 
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() == 1) 
@@ -101,7 +34,6 @@ int main(int argc, char* argv[]){
 	filterbank fb;
 
 	try {
-
 		fb = filterbank::read_filterbank(filename);
 	}
 	catch(const char* msg){
@@ -111,8 +43,9 @@ int main(int argc, char* argv[]){
 
     // Read tstart from the filterbank file
     double tstart = fb.header["tstart"].val.d;
-	getGregDate(tstart,&year,&month,&day);
-	
+
+	// Convert the Modified Julian Date to the gregorian date
+    auto gregorian_date = boost::gregorian::gregorian_calendar::from_modjulian_day_number(tstart);
 
 	std::cout << "Data file                        : " << filename << "\n";
 	std::cout << "Header size (bytes)              : " << fb.header_size << "\n";
@@ -136,9 +69,10 @@ int main(int argc, char* argv[]){
 
 	// TODO: print this properly
 
-//	if (fb.header["src_raj"].val.d)
+	if (fb.header["src_raj"].val.d)
+	    std::cout << "source RA (J2000)" <<
 //		printf("Source RA (J2000)                : %02d:%02d:%s\n", rah, ram, sra);
-//	if (fb.header["src_raj"].val.d)
+	if (fb.header["src_raj"].val.d)
 //		printf("Source DEC (J2000)               : %c%02d:%02d:%s\n", decsign, abs(ded), dem, sde);
 
 	if (fb.header["az_start"].val.d)
@@ -177,11 +111,14 @@ int main(int argc, char* argv[]){
 		std::cout << "Frequency of channel 1 (MHz)     : " << fb.header["fch1"].val.d << "\n";
 		std::cout << "Channel bandwidth      (MHz)     : " << abs(fb.header["foff"].val.d) << "\n";
 		std::cout << "Number of channels               : " << fb.header["nchans"].val.i << "\n";
+		std::cout << "Number of channels               : " << fb.header["nchans"].val.i << "\n";
 		break;
 	}
 
 	std::cout << "Time stamp of first sample (MJD) : " << fb.header["tstart"].val.d << "\n";
-    printf("Gregorian date (YYYY/MM/DD)      : %4d/%02d/%02d\n",year,month,day);
+	std::cout << "Gregorian date (YYYY/MM/DD)      : " << gregorian_date.year << "/" << gregorian_date.month
+	            << "/" << gregorian_date.day << std::endl;
+
 	if (fb.header["data_type"].val.i != 3)
 		std::cout << "Sample time (us)                 : " << fb.header["tsamp"].val.d * 1.0e6 << "\n";
 
@@ -189,23 +126,10 @@ int main(int argc, char* argv[]){
 	    std::cout << "Number of samples                : " << fb.header["nsamples"].val.i << std::endl;
 
 	    tobs = (double) fb.header["nsamples"].val.i * fb.header["tsamp"].val.d;
-        strcpy(unit, "(in seconds) ");
 
-//      TODO: clean this up
-	    if (tobs > 60.0) {
-	        tobs/=60.0;
-            strcpy(unit, "(in minutes) ");
-	        if (tobs > 60.0) {
-	            tobs /= 60.0;
-                strcpy(unit, "(in hours) ");
-	            if (tobs > 24) {
-	                tobs /= 24;
-                    strcpy(unit, "(in days) ");
-	            }
-	        }
-	    }
+	    index = get_obs_unit();
 
-	    std::cout << "Observation length " << unit << " : " << tobs << std::endl;
+	    std::cout << "Observation length " << unit[index] << " : " << tobs << std::endl;
     }
 
 	std::cout << "Number of bits per sample        : " << fb.header["nbits"].val.i << "\n";

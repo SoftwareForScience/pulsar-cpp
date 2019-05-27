@@ -5,6 +5,11 @@
 #include <iostream>
 #include <vector>
 #include "filterbank-core.h"
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+namespace BDT = boost::date_time;
+
 
 class header {
 
