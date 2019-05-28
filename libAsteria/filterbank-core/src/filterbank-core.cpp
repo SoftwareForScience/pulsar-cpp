@@ -78,29 +78,29 @@ void filterbank::save_filterbank(bool save_header) {
 			// Get the index for the interface
 			int32_t index = (sample * n_ifs * n_channels) + (interface * n_channels);
 			switch (n_bytes) {
-			case 1: {
-				std::vector<char>cwbuf(n_channels);
-				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
-					cwbuf[channel - start_channel] = (char)data[((uint64_t)index) + channel];
+				case 1: {
+					std::vector<uint8_t>cwbuf(n_channels);
+					for (uint32_t channel = start_channel; channel < end_channel; channel++) {
+						cwbuf[channel - start_channel] = (uint8_t)data[((uint64_t)index) + channel];
+					}
+
+					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), f);
+					break;
 				}
+				case 2: {
+					std::vector<uint16_t>swbuf(n_channels);
+					for (uint32_t channel = start_channel; channel < end_channel; channel++) {
+						swbuf[channel - start_channel] = (uint16_t)data[((uint64_t)index) + channel];
+					}
 
-				fwrite(&cwbuf[0], sizeof(char), n_channels, f);
-				break;
-			}
-			case 2: {
-				std::vector<uint16_t>swbuf(n_channels);
-				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
-					swbuf[channel - start_channel] = (uint16_t)data[((uint64_t)index) + channel];
+					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), f);
+
+					break;
 				}
-
-				fwrite(&swbuf[0], sizeof(uint16_t), n_channels, f);
-
-				break;
-			}
-			case 4: {
-				fwrite(&data[index], 4, n_channels, f);
-				break;
-			}
+				case 4: {
+					fwrite(&data[index], sizeof(uint32_t), data.size(), f);
+					break;
+				}
 			}
 		}
 	}
@@ -203,7 +203,7 @@ bool filterbank::read_data() {
 	auto n_bytes_to_skip = (start_sample * n_ifs * header["nchans"].val.i);
 	fseek(f, n_bytes_to_skip, SEEK_CUR);
 
-		for (uint32_t sample = 0; sample < n_samples; sample ++) {
+	for (uint32_t sample = 0; sample < n_samples; sample ++) {
 		for (uint32_t interface = 0; interface < n_ifs; interface++) {
 			int32_t start_bytes_to_skip = start_channel * n_bytes;
 			int32_t end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;

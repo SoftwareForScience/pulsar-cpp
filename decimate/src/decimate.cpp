@@ -73,6 +73,7 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 
 	fb.header["nchans"].val.i = n_channels_out;
 	fb.n_channels = n_channels_out;
+	fb.end_channel = n_channels_out - fb.start_channel;
 	fb.data = temp;
 }
 
@@ -111,6 +112,7 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 
 	fb.header["nsamples"].val.i = n_samples_out;
 	fb.n_samples = n_samples_out;
+	fb.end_sample = n_samples_out - fb.start_sample;
 
 	// if we decrease the amount of samples, the time between samples increase
 	fb.header["tsamp"].val.d = fb.header["tsamp"].val.d * n_samples_to_combine;
