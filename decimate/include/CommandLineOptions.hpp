@@ -18,13 +18,13 @@ public:
     CommandLineOptions();
     statusReturn_e parse(int argc, char* argv[]);
 
-    inline const std::string & getInputFile() const;
-    inline const std::string & getOutputFile() const;
-    inline int32_t getNumberOfChannels() { return num_chans; };
-    inline int32_t getNumberOfSamples() { return num_samps; };
-    inline int32_t getNumberOfOutputSamples() { return num_output_samples; };
-    inline int32_t getNumberOfBits() { return num_bits; };
-    inline bool getHeaderlessFlag() { return myHeaderlessFlag; };
+    const std::string & getInputFile() const;
+    const std::string & getOutputFile() const;
+    int32_t getNumberOfChannels() { return num_chans; };
+    int32_t getNumberOfSamples() { return num_samps; };
+    int32_t getNumberOfOutputSamples() { return num_output_samples; };
+    int32_t getNumberOfBits() { return num_bits; };
+    bool getHeaderlessFlag() { return myHeaderlessFlag; };
 
 protected:
     void setup();

@@ -128,7 +128,7 @@ void legacy_arguments(int argc, char* argv[], CommandLineOptions& opts) {
     {
         if (!s.compare("-headerless"))
         {
-            argv[count] = "--headerless";
+            argv[count] = (char*)"--headerless";
         }
         count++;
     }
