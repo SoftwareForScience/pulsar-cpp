@@ -8,7 +8,7 @@ env:
     # Global build options and C++ flags
     - CXX_FLAGS=""
     # Misc
-    - BOOST_LIBRARIES="date_time"
+    - BOOST_LIBRARIES="date_time,program_options"
     - RUN_TESTS=false
     - COVERAGE=false
 

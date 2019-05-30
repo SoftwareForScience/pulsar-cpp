@@ -1,93 +1,49 @@
 #include "decimate.h"
 
-int32_t main(int32_t argc, char* argv[]) {
-
-	std::vector<std::string> argList(argv, argv + argc);
-	if (argList.size() < 2) {
-		show_usage(argList[0]);
-		exit(-1);
-	}
-
-	int32_t num_chans = 1, num_samps = 1, num_output_samples = 1;
-	bool save_header = true;
-	std::string outputFile = "";
+int main(int argc, char* argv[]) {
 	filterbank fb;
+	CommandLineOptions opts;
+	legacy_arguments(argc, argv, opts);
 
-	if (asteria::file_exists(argList[1])) {
-		std::string filename = argList[1];
-		fb = filterbank::read_filterbank(filename);
+	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
+	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
+		fb = filterbank::read_filterbank(opts.getInputFile());
 		fb.read_data();
-	}
+		if ((opts.getOutputFile()).length() != 0) {
+			fb.filename = opts.getOutputFile();
+		} else {
+			fb.filename = opts.getInputFile();
+		}
 
-	// TODO: Check if file starts with HEADER_START, if so, use the file.
-	else {
-		show_usage("Decimate");
-		std::cerr << "file: " << argList[1] << " does not exist\n";
-		exit(-1);
-	}
-	//TODO: Better error handling
-	for (int32_t i = 2; i < argList.size(); i++) {
-		if (!argList[i].compare("-c")) {
-			num_chans = atoi(argv[++i]);
-			if (num_chans <= 0) {
-				show_usage("Decimate");
-				std::cerr << "Number of channels must be greater than 0\n";
-				exit(-1);
-			}
-		}
-		else if (!argList[i].compare("-o")) {
-			fb.filename = argList[++i];
-		}
-		else if (!argList[i].compare("-t")) {
-			num_samps = atoi(argv[++i]);
-			if (num_samps <= 0) {
-				show_usage("Decimate");
-				std::cerr << "Number of samples must be greater than 0\n";
-				exit(-1);
-			}
-		}
-		else if (!argList[i].compare("-T")) {
-			num_output_samples = atoi(argv[++i]);
-			if (num_output_samples <= 0) {
-				show_usage("Decimate");
-				std::cerr << "Number of output timesamples must be greater than 0\n";
-				exit(-1);
-			}
-			num_samps = fb.n_samples / num_output_samples;
-		}
-		else if (!argList[i].compare("-n")) {
-			fb.header["nbits"].val.i = atoi(argv[++i]);
-		}
-		else if (!argList[i].compare("-headerless")) {
-			save_header = false;
+		// if (opts.getNumberOfBits()) {
+		// 	fb.header["nbits"].val.i = opts.getNumberOfBits();
+		// }
+
+		if (opts.getNumberOfOutputSamples()) {
+			decimate_samples(fb, (fb.n_samples / opts.getNumberOfOutputSamples()));
 		}
 		else {
-			show_usage("Decimate");
-			std::cerr << "unknown argument " << argv[i] << " passed to decimate\n";
-			exit(-2);
+			decimate_samples(fb, opts.getNumberOfSamples());
 		}
-	}
+		decimate_channels(fb, opts.getNumberOfChannels());
 
-	if (fb.n_channels % num_chans) {
-		std::cerr << "File does not contain a multiple of: " << num_chans << " channels.\n";
-		exit(-3);
+		fb.save_filterbank(!opts.getHeaderlessFlag());
 	}
-	if (fb.n_samples % num_samps) {
-		std::cerr << "File does not contain a multiple of: " << num_samps << " samples.\n";
-		exit(-3);
+	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
+		//Help printed
+		//Do something else?
 	}
-
-	if (num_chans > 1) {
-		decimate_channels(fb, num_chans);
+	else {
+		std::cerr << "Something went wrong." << std::endl;
+		//do sOmEtHiNg
 	}
-	if (num_samps > 1) {
-		decimate_samples(fb, num_samps);
-	}
-
-	fb.save_filterbank(save_header);
 }
 
 void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
+	if (n_channels_to_combine < 1 || fb.n_channels % n_channels_to_combine) {
+		std::cerr << "File does not contain a multiple of: " << n_channels_to_combine << " channels.\n";
+		exit(-3);
+	}
 
 	uint32_t n_channels_out = fb.n_channels / n_channels_to_combine;
 	uint32_t n_values_out = fb.n_ifs * n_channels_out * fb.n_samples;
@@ -122,6 +78,11 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 }
 
 void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
+	if (n_samples_to_combine < 1 || fb.n_samples % n_samples_to_combine) {
+		std::cerr << "File does not contain a multiple of: " << n_samples_to_combine << " samples.\n";
+		exit(-3);
+	}
+
 	uint32_t n_samples_out = fb.n_samples / n_samples_to_combine;
 	uint32_t n_values_out = fb.n_ifs * fb.n_channels * n_samples_out;
 
@@ -158,16 +119,18 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	fb.data = temp;
 }
 
-void show_usage(std::string name) {
-	std::cerr
-		<< name << " - reduce time and/or frequency resolution of filterbank-core data\n" << std::endl
-		<< "usage: " << name << "{filename} -{options}\n" << std::endl
-		<< "options: \n" << std::endl
-		<< "   filename - filterbank-core data file (def=stdin)" << std::endl
-		<< "-o filename - output filterbank-core data file" << std::endl
-		<< "-c numchans - number of channels to add (def=all)" << std::endl
-		<< "-t numsamps - number of time samples to add (def=none)" << std::endl
-		<< "-T numsamps - (alternative to -t) specify numberof output timesamples" << std::endl
-		<< "-n numbits  - specify output numberof bits(def=input)" << std::endl
-		<< "-headerless - do not broadcast resulting header(def=broadcast)" << std::endl;
+void legacy_arguments(int argc, char* argv[], CommandLineOptions& opts) {
+	//BEGIN LEGACY
+    //-headerless is not a valid switch, changing it to --headerless.
+    int count = 0;
+    std::vector<std::string> arguments(argv, argv + argc);
+    for (std::string &s : arguments)
+    {
+        if (!s.compare("-headerless"))
+        {
+            argv[count] = (char*)"--headerless";
+        }
+        count++;
+    }
+    //ENDLEGACY
 }
