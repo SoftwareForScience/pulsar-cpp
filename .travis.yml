@@ -25,8 +25,8 @@ matrix:
          packages:
            - gcc-4.8
            - g++-4.8
+           - lcov
           #  - valgrind
-           # Misc (lcov etc)
     
 before_install:
     # Combine global build options with OS/compiler-dependent options
@@ -63,4 +63,4 @@ script:
 
 
 after_success:
-    # - codecov -t ${guid}
+    # - codecov -t ${CODECOV_TOKEN}
