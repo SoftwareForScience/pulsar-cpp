@@ -22,7 +22,6 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	clock_t time_req = clock();
 
 	fb.infilename = filename;
-	fb.outf = fopen(fb.outfilename.c_str(), "wb");
 
 	if (filename.compare("") == 0) {
 		std::FILE* tmpf = std::tmpfile();
@@ -39,6 +38,10 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	} else {
 		fb.inf = fopen(filename.c_str(), "rb");
 	}
+
+	if (fb.inf == NULL) {
+		std::cerr << "Failed to read from file \n";
+	}
 	
 	if (!fb.read_header()) {
 		throw "Invalid filterbank-core file";
@@ -54,8 +57,16 @@ filterbank filterbank::read_filterbank(std::string filename) {
 }
 
 void filterbank::save_filterbank(bool save_header) {
-	outf = fopen(outfilename.c_str(), "wb");
-//TODO: Error handling
+	bool cmdOutput = false;
+	if (outfilename.compare("") == 0) {
+		std::FILE* tmpf = std::tmpfile();
+		outf = tmpf;
+		cmdOutput = true;
+	} else {
+		outf = fopen(outfilename.c_str(), "wb");
+	}
+
+	//TODO: Error handling
 	if (outf == NULL) {
 		std::cerr << "Failed to write to file \n";
 		return;
@@ -120,7 +131,18 @@ void filterbank::save_filterbank(bool save_header) {
 			}
 		}
 	}
-	// fclose(f);
+
+
+	if(cmdOutput == true) {
+		char s;
+		std::rewind(outf);
+		while((s=fgetc(outf))!=EOF) {
+			std::cout << s;
+		}
+	}
+	
+	fclose(inf);
+	fclose(outf);
 }
 
 filterbank::filterbank() {

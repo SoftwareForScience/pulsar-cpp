@@ -9,15 +9,10 @@ int main(int argc, char* argv[]) {
 	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
 		fb = filterbank::read_filterbank(opts.getInputFile());
 		fb.read_data();
-		if ((opts.getOutputFile()).length() != 0) {
-			fb.outfilename = opts.getOutputFile();
-		} else {
-			fb.outfilename = opts.getInputFile();
-		}
 
-		// if (opts.getNumberOfBits()) {
-		// 	fb.header["nbits"].val.i = opts.getNumberOfBits();
-		// }
+		if (opts.getNumberOfBits()) {
+			fb.header["nbits"].val.i = opts.getNumberOfBits();
+		}
 
 		if (opts.getNumberOfOutputSamples()) {
 			decimate_samples(fb, (fb.n_samples / opts.getNumberOfOutputSamples()));
@@ -27,6 +22,7 @@ int main(int argc, char* argv[]) {
 		}
 		decimate_channels(fb, opts.getNumberOfChannels());
 
+		fb.outfilename = opts.getOutputFile();
 		fb.save_filterbank(!opts.getHeaderlessFlag());
 	}
 	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
