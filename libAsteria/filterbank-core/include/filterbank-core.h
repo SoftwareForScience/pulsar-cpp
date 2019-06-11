@@ -14,6 +14,7 @@
 #include <vector>
 #include "HeaderParam.h"
 #include <vector>
+#include <stdio.h>
 
 class filterbank {
 public:
@@ -72,10 +73,12 @@ public:
 	std::list<double> timestamps;
 	std::list<double> frequencies;
 	std::vector<float> data;
-	std::string filename;
+	std::string infilename;
+	std::string outfilename;
 
 private:
-	FILE* f;
+	FILE* inf;
+	FILE* outf;
 
 	uint32_t n_bytes = 0;
 	uint32_t file_size = 0;

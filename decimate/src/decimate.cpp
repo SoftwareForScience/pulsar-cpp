@@ -10,9 +10,9 @@ int main(int argc, char* argv[]) {
 		fb = filterbank::read_filterbank(opts.getInputFile());
 		fb.read_data();
 		if ((opts.getOutputFile()).length() != 0) {
-			fb.filename = opts.getOutputFile();
+			fb.outfilename = opts.getOutputFile();
 		} else {
-			fb.filename = opts.getInputFile();
+			fb.outfilename = opts.getInputFile();
 		}
 
 		// if (opts.getNumberOfBits()) {

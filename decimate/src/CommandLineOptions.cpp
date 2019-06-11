@@ -19,7 +19,7 @@ void CommandLineOptions::setup() {
 usage: decimate {filename} -{options}\n\noptions");
     options.add_options()
         ("help,h", "produce this help message")
-        ("filename", po::value<std::string>(&myInputFile)->required()->value_name("FILE"), "filterbank data file (def=stdin)")
+        ("filename", po::value<std::string>(&myInputFile)->value_name("FILE"), "filterbank data file (def=stdin)")
         (",o", po::value<std::string>(&myOutputFile)->value_name("FILE"), "filterbank output file (def=stdout)")
         (",c", po::value<int>(&num_chans)->value_name("numchans"), "number of channels to add (def=all)")
         (",t", po::value<int>(&num_samps)->value_name("numsamps"), "number of time samples to add (def=none)")

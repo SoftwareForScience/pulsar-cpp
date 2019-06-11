@@ -21,12 +21,28 @@ filterbank filterbank::read_filterbank(std::string filename) {
 	filterbank fb;
 	clock_t time_req = clock();
 
-	fb.filename = filename;
+	fb.infilename = filename;
+	fb.outf = fopen(fb.outfilename.c_str(), "wb");
 
+	if (filename.compare("") == 0) {
+		std::FILE* tmpf = std::tmpfile();
+		char c;
+		while (std::cin.good())
+		{
+			c = std::cin.get();
+			if(std::cin.good()) {
+				fwrite(&c,sizeof(char), 1, tmpf);
+			}
+		}
+		std::rewind(tmpf);
+		fb.inf = tmpf;
+	} else {
+		fb.inf = fopen(filename.c_str(), "rb");
+	}
+	
 	if (!fb.read_header()) {
 		throw "Invalid filterbank-core file";
 	}
-
 	fb.setup_time(false, false);
 	time_req = clock() - time_req;
 	// std::cout << "Time spent setting time: " << time_req / CLOCKS_PER_SEC << " seconds\n";
@@ -38,9 +54,9 @@ filterbank filterbank::read_filterbank(std::string filename) {
 }
 
 void filterbank::save_filterbank(bool save_header) {
-	f = fopen(filename.c_str(), "wb");
+	outf = fopen(outfilename.c_str(), "wb");
 //TODO: Error handling
-	if (f == NULL) {
+	if (outf == NULL) {
 		std::cerr << "Failed to write to file \n";
 		return;
 	}
@@ -84,7 +100,7 @@ void filterbank::save_filterbank(bool save_header) {
 						cwbuf[channel - start_channel] = (uint8_t)data[((uint64_t)index) + channel];
 					}
 
-					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), f);
+					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), outf);
 					break;
 				}
 				case 2: {
@@ -93,49 +109,45 @@ void filterbank::save_filterbank(bool save_header) {
 						swbuf[channel - start_channel] = (uint16_t)data[((uint64_t)index) + channel];
 					}
 
-					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), f);
+					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), outf);
 
 					break;
 				}
 				case 4: {
-					fwrite(&data[index], sizeof(uint32_t), data.size(), f);
+					fwrite(&data[index], sizeof(uint32_t), data.size(), outf);
 					break;
 				}
 			}
 		}
 	}
-
-	fclose(f);
+	// fclose(f);
 }
 
 filterbank::filterbank() {
-	f = NULL;
+	inf = NULL;
 	data = std::vector<float>(0);
 }
 
 bool filterbank::read_header() {
 	//TODO: Error handling
-	f = fopen(filename.c_str(), "rb");
-
-	if (f == NULL) {
+	// f = fopen(filename.c_str(), "rb");
+	if (inf == NULL) {
 		return false;
 	}
 
 	uint32_t keylen = 0;
 	char* buffer = read_string(keylen);
 	const std::string initial(buffer);
-
 	if (initial.compare("HEADER_START")) {
 		// if this isn't present, the file is not a valid filterbank-core file.
 		return false;
 	}
-
 	while (true) {
 		buffer = read_string(keylen);
 		const std::string token(buffer);
 		if (!token.compare("HEADER_END")) {
 			// get size of the header by getting the current position;
-			header_size = ftell(f);
+			header_size = ftell(inf);
 			break;
 		}
 
@@ -159,8 +171,8 @@ bool filterbank::read_header() {
 	}
 
 	// get the size of the file by looking for the end, then getting the current position;
-	fseek(f, 0, SEEK_END);
-	file_size = ftell(f);
+	fseek(inf, 0, SEEK_END);
+	file_size = ftell(inf);
 	data_size = file_size - header_size;
 
 	n_channels = header["nchans"].val.i;
@@ -179,17 +191,17 @@ bool filterbank::read_header() {
 	n_samples = header["nsamples"].val.i;
 	n_values = n_ifs * n_channels * n_samples;
 
-	fclose(f);
+	// fclose(f);
 
 	return true;
 }
 
 bool filterbank::read_data() {
 	//TODO: Error handling
-	f = fopen(filename.c_str(), "rb");
+	// f = fopen(filename.c_str(), "rb");
 	auto n_bytes_read = 0;
 
-	if (f == NULL) {
+	if (inf == NULL) {
 		return false;
 	}
 
@@ -197,11 +209,11 @@ bool filterbank::read_data() {
 	data = std::vector<float>(n_values);
 
 	// Skip the header
-	fseek(f, header_size, SEEK_SET);
+	fseek(inf, header_size, SEEK_SET);
 
 	// Skip the amount of samples we're offset from
 	auto n_bytes_to_skip = (start_sample * n_ifs * header["nchans"].val.i);
-	fseek(f, n_bytes_to_skip, SEEK_CUR);
+	fseek(inf, n_bytes_to_skip, SEEK_CUR);
 
 	for (uint32_t sample = 0; sample < n_samples; sample ++) {
 		for (uint32_t interface = 0; interface < n_ifs; interface++) {
@@ -209,14 +221,14 @@ bool filterbank::read_data() {
 			int32_t end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
 
 			//Skip the amount of channels we're not interested in
-			fseek(f, start_bytes_to_skip, SEEK_CUR);
+			fseek(inf, start_bytes_to_skip, SEEK_CUR);
 			n_bytes_read += read_block(header["nbits"].val.i, &data[n_bytes_read], n_channels);
 			//Skip the last few channels
-			fseek(f, end_bytes_to_skip , SEEK_CUR);
+			fseek(inf, end_bytes_to_skip , SEEK_CUR);
 		}
 	}
 
-	fclose(f);
+	// fclose(f);
 
 	return true;
 }
@@ -230,20 +242,20 @@ uint32_t filterbank::read_block(uint16_t nbits, float* block, const uint32_t nre
 	/* decide how to read the data based on the number of bits per sample */
 	switch (nbits) {
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), f);
+		samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), inf);
 		for (uint32_t i = 0; i < nread; i++) {
 			block[i] = (float)charblock[i];
 		}
 		break;
 
 	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), f);
+		samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), inf);
 		for (uint32_t i = 0; i < samples_read; i++) {
 			block[i] = (float)shortblock[i];
 		}
 		break;
 	case 32:
-		samples_read = fread(block, sizeof(float), nread, f);
+		samples_read = fread(block, sizeof(float), nread, inf);
 		break;
 	}
 
@@ -305,37 +317,37 @@ void  filterbank::setup_time(uint32_t start, uint32_t end) {
 
 uint32_t filterbank::read_key_size() {
 	uint32_t keylen;
-	fread(&keylen, sizeof(keylen), 1, f);
+	fread(&keylen, sizeof(keylen), 1, inf);
 	return keylen;
 }
 
 char* filterbank::read_string(uint32_t& keylen) {
-	fread(&keylen, sizeof(uint32_t), 1, f);
+	fread(&keylen, sizeof(uint32_t), 1, inf);
 
 	  char* buffer = new char[(((uint64_t)keylen) + 1)]{ '\0' };
-	std::fread(buffer, sizeof(char), keylen, f);
+	std::fread(buffer, sizeof(char), keylen, inf);
 	return buffer;
 }
 
 void filterbank::write_string(const std::string string) {
 	uint32_t len = string.length();
 	//Write the length of our string
-	fwrite(&len, sizeof(int), 1, f);
+	fwrite(&len, sizeof(int), 1, outf);
 	//then write the actual string
-	fwrite(string.c_str(), sizeof(char), len, f);
-	fflush(f);
+	fwrite(string.c_str(), sizeof(char), len, outf);
+	fflush(outf);
 }
 
 template <typename T >
 T filterbank::read_value() {
 	T value;
-	fread(&value, sizeof(T), 1, f);
+	fread(&value, sizeof(T), 1, inf);
 	return value;
 }
 
 template <typename T>
 void filterbank::write_value(const std::string key, T value) {
 	write_string(key);
-	fwrite(&value, sizeof(T), 1, f);
-	fflush(f);
+	fwrite(&value, sizeof(T), 1, outf);
+	fflush(outf);
 }
