@@ -5,4 +5,4 @@ project ("filterbankCore")
 
 include_directories("./include")
 
-add_library(filterbankCore "./src/filterbankCore.cpp")
+add_library(filterbankCore "./src/filterbankCore.cpp" "./src/filterbankFile.cpp" "./src/filterbankStdio.cpp")

@@ -11,7 +11,7 @@ enum dataType
 union headerValue {
 	int32_t i;
 	char s[80]{'\0'};
-	double d ;
+	double d;
 };
 
 struct header_param

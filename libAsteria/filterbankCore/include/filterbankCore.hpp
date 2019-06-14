@@ -14,25 +14,23 @@
 #include <vector>
 #include <stdio.h>
 #include "headerParam.hpp"
-#include "filterbankFile.hpp"
 
 class filterbank {
 public:
 	filterbank();
 
-	enum inputType
+	enum ioType
 	{
 		STDIO = 0,
-		INFILE = 1
+		FILEIO = 1
 	};
 
-	static filterbank read(filterbank::inputType inputType, std::string input = "");
-	static filterbank read_stdio(std::string input);
-	static filterbank read_file(std::string filename);
+
+	static filterbank read(filterbank::ioType inputType, std::string input = "");
 
 
 	// If we receive an empty string, write to STDIO
-	static void write(std::string filename = "", bool headerless = false);
+	static void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
 
 
 	void save_file(std::string filename, bool save_header = true);
@@ -93,6 +91,13 @@ public:
 	std::string outfilename;
 
 private:
+	static filterbank read_stdio(std::string input);
+	static filterbank read_file(std::string filename);
+	bool read_header_file(FILE* inf);
+	bool read_header_stdio(FILE* inf);
+	bool write_file(std::string filename, bool headerless);
+	bool write_stdio(bool headerless);
+
 	uint32_t n_bytes = 0;
 	uint32_t file_size = 0;
 	double center_freq = 0.0;
@@ -101,17 +106,15 @@ private:
 	static std::map<uint16_t, std::string> machine_ids;
 
 	template <typename T>
-	T read_value();
+	T read_value(FILE* fp);
 	
-	bool read_header_file();
-
-	uint32_t read_key_size();
-	char* read_string(uint32_t& keylen);
-	uint32_t read_data(uint16_t nbits, float* block, uint32_t nread);
+	uint32_t read_key_size(FILE* fp);
+	char* read_string(FILE* fp, uint32_t& keylen);
+	uint32_t read_data(FILE* fp, uint16_t nbits, float* block, uint32_t nread);
 
 	template <typename T>
-	void write_value(std::string key, T value);
-	void write_string(std::string string);
+	void write_value(FILE* fp, std::string key, T value);
+	void write_string(FILE* fp, std::string string);
 };
 
 #endif // !FILTERBANK_H

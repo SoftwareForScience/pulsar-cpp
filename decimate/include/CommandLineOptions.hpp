@@ -25,6 +25,7 @@ public:
     int32_t getNumberOfOutputSamples() { return num_output_samples; };
     int32_t getNumberOfBits() { return num_bits; };
     int getInputType() { return inputType; };
+    int getOutputType() { return outputType; };
     bool getHeaderlessFlag() { return myHeaderlessFlag; };
 
 protected:

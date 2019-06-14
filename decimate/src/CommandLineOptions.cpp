@@ -4,7 +4,7 @@ CommandLineOptions::CommandLineOptions():
     myOptions(),
     myPositionalOptions(),
     inputType(0),
-    // outputType(1),
+    outputType(0),
     myInputFile(),
     myOutputFile(),
     num_chans(1),
@@ -49,6 +49,9 @@ CommandLineOptions::statusReturn_e CommandLineOptions::parse(int argc, char* arg
             return OPTS_HELP; 
         }
         if (vm.count("filename")) {
+            inputType = 1;
+        }
+        if (vm.count("--o")) {
             outputType = 1;
         }
 
