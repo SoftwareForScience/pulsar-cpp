@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "filterbank-core.h"
+#include "filterbankCore.hpp"
 #include "fileutils.h"
 #include "CommandLineOptions.hpp"
 

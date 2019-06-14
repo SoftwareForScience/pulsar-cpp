@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
 
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() == 1) 
-		std::cout << "Please supply a filterbank-core file \n";
+		std::cout << "Please supply a filterbankCore file \n";
 
 	std::string filename = argList[1];
 	filterbank fb;

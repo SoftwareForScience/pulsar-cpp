@@ -4,7 +4,7 @@
 #include <math.h>
 #include <iostream>
 #include <vector>
-#include "filterbank-core.h"
+#include "filterbankCore.hpp"
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 

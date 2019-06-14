@@ -7,7 +7,8 @@ int main(int argc, char* argv[]) {
 
 	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
 	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
-		fb = filterbank::read_filterbank(opts.getInputFile());
+		//Casting int to enum filterbank::inputType
+		fb = filterbank::read((filterbank::inputType)opts.getInputType(), opts.getInputFile());
 		fb.read_data();
 
 		if (opts.getNumberOfBits()) {
@@ -23,7 +24,7 @@ int main(int argc, char* argv[]) {
 		decimate_channels(fb, opts.getNumberOfChannels());
 
 		fb.outfilename = opts.getOutputFile();
-		fb.save_filterbank(!opts.getHeaderlessFlag());
+		fb.write("", opts.getHeaderlessFlag());
 	}
 	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
 		//Help printed

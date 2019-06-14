@@ -3,6 +3,8 @@
 CommandLineOptions::CommandLineOptions():
     myOptions(),
     myPositionalOptions(),
+    inputType(0),
+    // outputType(1),
     myInputFile(),
     myOutputFile(),
     num_chans(1),
@@ -45,6 +47,9 @@ CommandLineOptions::statusReturn_e CommandLineOptions::parse(int argc, char* arg
         if (vm.count("help")) { 
             std::cout << myOptions << std::endl;
             return OPTS_HELP; 
+        }
+        if (vm.count("filename")) {
+            outputType = 1;
         }
 
         po::notify(vm);

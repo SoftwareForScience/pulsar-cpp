@@ -4,7 +4,7 @@ set (CMAKE_CXX_STANDARD 11)
 project ("decimate")
 
 include_directories("./include")
-include_directories("../libAsteria/filterbank-core/include")
+include_directories("../libAsteria/filterbankCore/include")
 include_directories("../libAsteria/IO/include")
 
 set(Boost_NO_BOOST_CMAKE TRUE)
@@ -15,7 +15,7 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 if(Boost_FOUND)
     add_executable(decimate "./src/decimate.cpp" "./src/CommandLineOptions")
-    target_link_libraries(decimate filterbank-core)
+    target_link_libraries(decimate filterbankCore)
     target_link_libraries(decimate asteria)
     target_link_libraries(decimate ${Boost_LIBRARIES})
 endif()

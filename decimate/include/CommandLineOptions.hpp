@@ -24,6 +24,7 @@ public:
     int32_t getNumberOfSamples() { return num_samps; };
     int32_t getNumberOfOutputSamples() { return num_output_samples; };
     int32_t getNumberOfBits() { return num_bits; };
+    int getInputType() { return inputType; };
     bool getHeaderlessFlag() { return myHeaderlessFlag; };
 
 protected:
@@ -34,6 +35,8 @@ private:
     po::positional_options_description myPositionalOptions;
     std::string myInputFile;
     std::string myOutputFile;
+    int inputType;
+    int outputType;
     int num_chans;
     int num_samps;
     int num_output_samples;
