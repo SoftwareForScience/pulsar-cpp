@@ -51,6 +51,7 @@ CommandLineOptions::statusReturn_e CommandLineOptions::parse(int argc, char* arg
     
     } catch (boost::program_options::required_option& ex_required) { 
         std::cerr << ex_required.what() << std::endl;
+        std::cout << myOptions << std::endl;
         return ERROR_IN_COMMAND_LINE; 
     } catch (const po::error &ex) {
         std::cerr << ex.what() << std::endl;
