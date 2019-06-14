@@ -1,4 +1,6 @@
+[![GitHub license](https://img.shields.io/github/license/AUAS-Pulsar/Asteria.svg)](https://github.com/AUAS-Pulsar/Asteria/blob/master/LICENSE)
 [![Build Status](https://travis-ci.com/AUAS-Pulsar/Asteria.svg?branch=master)](https://travis-ci.com/AUAS-Pulsar/Asteria)
+[![GitHub issues](https://img.shields.io/github/issues/AUAS-Pulsar/Asteria.svg)](https://github.com/AUAS-Pulsar/Asteria/issues)
 
 >  Asteria is a rewrite of the SIGPROC package designed to standardize the initial analysis of the many types of fast-sampled pulsar data. The SIGPROC tools should help users look at their data quickly, without the need to write (yet) another routine to read data.
 
@@ -11,7 +13,7 @@
 *  Gnu Make 3.82 or greater* 
 
 
-/* The program was tested using these versions. older versions might work but will not receive any support.
+_*The program was tested using these versions. older versions might work but will not receive any support._
 
 ### Installing
 ```
