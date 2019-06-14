@@ -18,7 +18,7 @@ std::map<uint16_t, std::string> filterbank::machine_ids = {
 };
 
 
-filterbank filterbank::read(filterbank::ioType inType, std::string input = "") {
+filterbank filterbank::read(filterbank::ioType inType, std::string input) {
 
 	filterbank fb;
 	switch (inType) {
@@ -35,7 +35,7 @@ filterbank filterbank::read(filterbank::ioType inType, std::string input = "") {
 
 }
 
-void filterbank::write(filterbank::ioType outType,std::string filename = "", bool headerless = false) {
+void filterbank::write(filterbank::ioType outType,std::string filename, bool headerless) {
 	//TODO: Error handling on IO
 	switch (outType) {
 	case ioType::STDIO:
@@ -50,72 +50,6 @@ filterbank::filterbank() {
 	data = std::vector<float>(0);
 }
 
-bool filterbank::read_data() {
-	//TODO: Error handling
-	// f = fopen(filename.c_str(), "rb");
-	auto n_bytes_read = 0;
-
-	if (inf == NULL) {
-		return false;
-	}
-
-	// Allocate a block of data
-	data = std::vector<float>(n_values);
-
-	// Skip the header
-	fseek(inf, header_size, SEEK_SET);
-
-	// Skip the amount of samples we're offset from
-	auto n_bytes_to_skip = (start_sample * n_ifs * header["nchans"].val.i);
-	fseek(inf, n_bytes_to_skip, SEEK_CUR);
-
-	for (uint32_t sample = 0; sample < n_samples; sample++) {
-		for (uint32_t interface = 0; interface < n_ifs; interface++) {
-			int32_t start_bytes_to_skip = start_channel * n_bytes;
-			int32_t end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
-
-			//Skip the amount of channels we're not interested in
-			fseek(inf, start_bytes_to_skip, SEEK_CUR);
-			n_bytes_read += read_block(header["nbits"].val.i, &data[n_bytes_read], n_channels);
-			//Skip the last few channels
-			fseek(inf, end_bytes_to_skip, SEEK_CUR);
-		}
-	}
-
-	// fclose(f);
-
-	return true;
-}
-
-uint32_t filterbank::read_data(uint16_t nbits, float* block, const uint32_t nread) {
-	size_t samples_read = 0;
-	uint32_t sample = 0;
-	std::vector<uint8_t> charblock(nread);
-	std::vector<uint16_t> shortblock(nread);
-
-	/* decide how to read the data based on the number of bits per sample */
-	switch (nbits) {
-	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), inf);
-		for (uint32_t i = 0; i < nread; i++) {
-			block[i] = (float)charblock[i];
-		}
-		break;
-
-	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), inf);
-		for (uint32_t i = 0; i < samples_read; i++) {
-			block[i] = (float)shortblock[i];
-		}
-		break;
-	case 32:
-		samples_read = fread(block, sizeof(float), nread, inf);
-		break;
-	}
-
-	return (uint32_t)samples_read;
-
-}
 
 void filterbank::setup_frequencies(uint32_t startchan, uint32_t endchan) {
 	double channel_bandwith = header["foff"].val.d;

@@ -27,10 +27,9 @@ public:
 
 
 	static filterbank read(filterbank::ioType inputType, std::string input = "");
-
-
+	
 	// If we receive an empty string, write to STDIO
-	static void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
+	void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
 
 
 	void save_file(std::string filename, bool save_header = true);
@@ -74,9 +73,7 @@ public:
 	uint32_t end_channel = 0;
 	uint32_t end_sample = 0;
 
-
 	bool read_data();
-
 
 	void setup_time(uint32_t start, uint32_t end);
 	void setup_frequencies(uint32_t startchan, uint32_t endchan);
@@ -87,14 +84,17 @@ public:
 	std::list<double> timestamps;
 	std::list<double> frequencies;
 	std::vector<float> data;
-	std::string infilename;
-	std::string outfilename;
 
 private:
 	static filterbank read_stdio(std::string input);
+	bool read_header_stdio(std::string input);
+	bool read_data_stdio(std::string input);
+
 	static filterbank read_file(std::string filename);
 	bool read_header_file(FILE* inf);
-	bool read_header_stdio(FILE* inf);
+	bool read_data_file(FILE* inf);
+	unsigned int read_data_block_file(FILE* inf, uint16_t nbits, float* block, const uint32_t nread);
+
 	bool write_file(std::string filename, bool headerless);
 	bool write_stdio(bool headerless);
 
@@ -105,15 +105,17 @@ private:
 	static std::map<uint16_t, std::string> telescope_ids;
 	static std::map<uint16_t, std::string> machine_ids;
 
-	template <typename T>
-	T read_value(FILE* fp);
+
 	
 	uint32_t read_key_size(FILE* fp);
-	char* read_string(FILE* fp, uint32_t& keylen);
-	uint32_t read_data(FILE* fp, uint16_t nbits, float* block, uint32_t nread);
+	uint32_t read_data(FILE* fp);
 
 	template <typename T>
+	T read_value(FILE* fp);
+	template <typename T>
 	void write_value(FILE* fp, std::string key, T value);
+
+	char* read_string(FILE* fp, uint32_t& keylen);
 	void write_string(FILE* fp, std::string string);
 };
 

@@ -23,7 +23,6 @@ int main(int argc, char* argv[]) {
 		}
 		decimate_channels(fb, opts.getNumberOfChannels());
 
-		fb.outfilename = opts.getOutputFile();
 		fb.write((filterbank::ioType)opts.getOutputType(), opts.getOutputFile(), opts.getHeaderlessFlag());
 	}
 	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
