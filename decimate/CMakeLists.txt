@@ -14,7 +14,7 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
 if(Boost_FOUND)
-    add_executable(decimate "./src/decimate.cpp" "./src/CommandLineOptions")
+    add_executable(decimate "./src/decimate.cpp" "./src/CommandLineOptions.cpp")
     target_link_libraries(decimate filterbankCore)
     target_link_libraries(decimate asteria)
     target_link_libraries(decimate ${Boost_LIBRARIES})

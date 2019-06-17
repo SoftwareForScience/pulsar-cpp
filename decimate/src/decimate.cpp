@@ -9,7 +9,6 @@ int main(int argc, char* argv[]) {
 	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
 		//Casting int to enum filterbank::inputType
 		fb = filterbank::read((filterbank::ioType)opts.getInputType(), opts.getInputFile());
-		fb.read_data();
 
 		if (opts.getNumberOfBits()) {
 			fb.header["nbits"].val.i = opts.getNumberOfBits();

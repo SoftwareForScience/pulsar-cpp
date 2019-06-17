@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
 	filterbank fb;
 
 	try {
-		fb = filterbank::read_filterbank(filename);
+		fb = filterbank::read(filterbank::ioType::FILEIO, filename);
 	}
 	catch(const char* msg){
 		std::cout << msg << "\n";

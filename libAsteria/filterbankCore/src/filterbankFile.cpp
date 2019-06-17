@@ -11,7 +11,6 @@ filterbank filterbank::read_file(std::string filename) {
 	if (fb.read_header_file(inf)) {
 		throw "Invalid filterbank file";
 	}
-	
 	return fb;
 }
 

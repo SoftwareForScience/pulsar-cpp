@@ -73,8 +73,6 @@ public:
 	uint32_t end_channel = 0;
 	uint32_t end_sample = 0;
 
-	bool read_data();
-
 	void setup_time(uint32_t start, uint32_t end);
 	void setup_frequencies(uint32_t startchan, uint32_t endchan);
 

@@ -7,8 +7,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
 	std::string filename = argv[1];
 
-	auto fb = filterbank::read(filterbank::inputType::INFILE, filename);
-	fb.read_data();
+	auto fb = filterbank::read(filterbank::ioType::FILEIO, filename);
 
 	dedisperse(fb, (double)10, (float)10, 10);
 
