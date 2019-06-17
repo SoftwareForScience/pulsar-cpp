@@ -27,13 +27,7 @@ public:
 
 
 	static filterbank read(filterbank::ioType inputType, std::string input = "");
-	
-	// If we receive an empty string, write to STDIO
-	void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
-
-
-	void save_file(std::string filename, bool save_header = true);
-
+		void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
 
 	std::map<std::string, header_param> header
 	{
@@ -62,25 +56,12 @@ public:
 		{"ibeam", INT}
 	};
 
-	uint32_t header_size = 0;
-	uint32_t data_size = 0;
-	uint32_t n_values = 0;
-	uint32_t n_samples = 0;
-	uint32_t n_channels = 0;
-	uint32_t n_ifs = 0;
-	uint32_t start_channel = 0;
-	uint32_t start_sample = 0;
-	uint32_t end_channel = 0;
-	uint32_t end_sample = 0;
-
-	void setup_time(uint32_t start, uint32_t end);
-	void setup_frequencies(uint32_t startchan, uint32_t endchan);
-
 	std::string telescope;
 	std::string backend;
 
-	std::list<double> timestamps;
-	std::list<double> frequencies;
+	uint32_t header_size = 0;
+	uint32_t data_size = 0;
+
 	std::vector<float> data;
 
 private:
@@ -91,13 +72,15 @@ private:
 	static filterbank read_file(std::string filename);
 	bool read_header_file(FILE* inf);
 	bool read_data_file(FILE* inf);
-	unsigned int read_data_block_file(FILE* inf, uint16_t nbits, float* block, const uint32_t nread);
 
 	bool write_file(std::string filename, bool headerless);
 	bool write_stdio(bool headerless);
 
+
+	uint32_t n_values = 0;
 	uint32_t n_bytes = 0;
 	uint32_t file_size = 0;
+
 	double center_freq = 0.0;
 
 	static std::map<uint16_t, std::string> telescope_ids;

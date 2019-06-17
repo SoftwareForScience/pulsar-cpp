@@ -11,11 +11,16 @@ filterbank filterbank::read_file(std::string filename) {
 	if (fb.read_header_file(inf)) {
 		throw "Invalid filterbank file";
 	}
+
+	fb.read_data_file(inf);
+
+	fclose(inf);
 	return fb;
 }
 
 bool filterbank::read_data_file(FILE* fp) {
-	auto n_bytes_read = 0;
+	size_t samples_read = 0;
+	uint32_t sample = 0;
 
 	if (fp == NULL) {
 		return false;
@@ -27,53 +32,32 @@ bool filterbank::read_data_file(FILE* fp) {
 	// Skip the header
 	fseek(fp, header_size, SEEK_SET);
 
-	// Skip the amount of samples we're offset from
-	auto n_bytes_to_skip = (start_sample * n_ifs * header["nchans"].val.i);
-	fseek(fp, n_bytes_to_skip, SEEK_CUR);
+	auto nread = header["nsamples"].val.i * header["nifs"].val.i * header["nchans"].val.i;
 
-	for (uint32_t sample = 0; sample < n_samples; sample++) {
-		for (uint32_t interface = 0; interface < n_ifs; interface++) {
-			int32_t start_bytes_to_skip = start_channel * n_bytes;
-			int32_t end_bytes_to_skip = (header["nchans"].val.i - end_channel) * n_bytes;
-
-			//Skip the amount of channels we're not interested in
-			fseek(fp, start_bytes_to_skip, SEEK_CUR);
-			n_bytes_read += read_data_block_file(fp, header["nbits"].val.i, &data[n_bytes_read], n_channels);
-			//Skip the last few channels
-			fseek(fp, end_bytes_to_skip, SEEK_CUR);
-		}
-	}
-	return true;
-}
-
-
-unsigned int filterbank::read_data_block_file(FILE* fp, uint16_t nbits, float* block, const uint32_t nread) {
-	size_t samples_read = 0;
-	uint32_t sample = 0;
 	std::vector<uint8_t> charblock(nread);
 	std::vector<uint16_t> shortblock(nread);
 
 	/* decide how to read the data based on the number of bits per sample */
-	switch (nbits) {
+	switch (header["nbits"].val.i) {
 	case 8: /* read n bytes into character block containing n 1-byte numbers */
 		samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), fp);
 		for (uint32_t i = 0; i < nread; i++) {
-			block[i] = (float)charblock[i];
+			data[i] = (float)charblock[i];
 		}
 		break;
 
 	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
 		samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), fp);
 		for (uint32_t i = 0; i < samples_read; i++) {
-			block[i] = (float)shortblock[i];
+			data[i] = (float)shortblock[i];
 		}
 		break;
 	case 32:
-		samples_read = fread(block, sizeof(float), nread, fp);
+		samples_read = fread(&data[0], sizeof(float), nread, fp);
 		break;
 	}
-
-	return samples_read;
+	
+	return true;
 }
 
 
@@ -111,24 +95,24 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 		write_string(fp, "HEADER_END");
 	}
 
-	for (uint32_t sample = 0; sample < n_samples; ++sample) {
-		for (uint32_t interface = 0; interface < n_ifs; ++interface) {
+	for (uint32_t sample = 0; sample < header["nsamples"].val.i; ++sample) {
+		for (uint32_t interface = 0; interface < header["nifs"].val.i; ++interface) {
 			// Get the index for the interface
-			unsigned int index = (sample * n_ifs * n_channels) + (interface * n_channels);
+			unsigned int index = (sample * header["nifs"].val.i * header["nchans"].val.i) + (interface * header["nchans"].val.i);
 			switch (n_bytes) {
 			case 1: {
-				std::vector<uint8_t>cwbuf(n_channels);
-				for (unsigned int channel = start_channel; channel < end_channel; channel++) {
-					cwbuf[channel - start_channel] = (uint8_t)data[((uint64_t)index) + channel];
+				std::vector<uint8_t>cwbuf(header["nchans"].val.i);
+				for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
+					cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
 				}
 
 				fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), fp);
 				break;
 			}
 			case 2: {
-				std::vector<uint16_t>swbuf(n_channels);
-				for (unsigned int channel = start_channel; channel < end_channel; channel++) {
-					swbuf[channel - start_channel] = (uint16_t)data[((uint64_t)index) + channel];
+				std::vector<uint16_t>swbuf(header["nchans"].val.i);
+				for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
+					swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
 				}
 
 				fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), fp);
@@ -190,10 +174,7 @@ bool filterbank::read_header_file(FILE* fp) {
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
 	data_size = file_size - header_size;
-
-	n_channels = header["nchans"].val.i;
-	n_ifs = header["nifs"].val.i;
-	center_freq = (header["fch1"].val.d + n_channels * header["foff"].val.d / 2.0);
+	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
 
 	telescope = telescope_ids[header["telescope_id"].val.i];
@@ -201,11 +182,10 @@ bool filterbank::read_header_file(FILE* fp) {
 
 	// if nsamples isn't set, get it from the data size
 	if (!header["nsamples"].val.i) {
-		header["nsamples"].val.i = data_size / (n_bytes * n_channels * n_ifs);
+		header["nsamples"].val.i = data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
 	}
 
-	n_samples = header["nsamples"].val.i;
-	n_values = n_ifs * n_channels * n_samples;
+	n_values = header["nifs"].val.i * header["nchans"].val.i * header["nsamples"].val.i;
 
 	return true;
 }

@@ -131,8 +131,8 @@ int main(int argc, char* argv[]){
 	case 0:
 	case 1:
 		if (!fb.header["fch1"].val.d && !fb.header["foff"].val.d) {
-			std::cout << "Highest frequency channel (MHz)  : " << fb.frequencies.front() << "\n";
-			std::cout << "Lowest frequency channel  (MHz)  : " << fb.frequencies.back() << "\n";
+			std::cout << "Highest frequency channel (MHz)  : " << fb.header["fch1"].val.d + (fb.header["foff"].val.d * fb.header["nchans"].val.i) << "\n";
+			std::cout << "Lowest frequency channel  (MHz)  : " << fb.header["fch1"].val.d << "\n";
 		}
 		else {
 			std::cout << "Frequency of channel 1 (MHz)     : " << fb.header["fch1"].val.d << "\n";

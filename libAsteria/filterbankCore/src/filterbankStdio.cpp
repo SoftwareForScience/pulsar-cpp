@@ -9,6 +9,7 @@ filterbank filterbank::read_stdio(std::string input) {
 	}
 
 	fb.read_header_stdio(input);
+	fb.read_data_stdio(input);
 	return fb;
 }
 
@@ -71,9 +72,7 @@ bool filterbank::read_header_stdio(std::string input) {
 	file_size = sizeof(input);
 	data_size = file_size - header_size;
 
-	n_channels = header["nchans"].val.i;
-	n_ifs = header["nifs"].val.i;
-	center_freq = (header["fch1"].val.d + n_channels * header["foff"].val.d / 2.0);
+	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
 
 	telescope = telescope_ids[header["telescope_id"].val.i];
@@ -81,11 +80,54 @@ bool filterbank::read_header_stdio(std::string input) {
 
 	// if nsamples isn't set, get it from the data size
 	if (!header["nsamples"].val.i) {
-		header["nsamples"].val.i = data_size / (n_bytes * n_channels * n_ifs);
+		header["nsamples"].val.i = data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
 	}
 
-	n_samples = header["nsamples"].val.i;
-	n_values = n_ifs * n_channels * n_samples;
+	n_values = header["nifs"].val.i * header["nchans"].val.i * header["nsamples"].val.i;
+
+	return true;
+}
+
+bool filterbank::read_data_stdio(std::string input) {
+	size_t samples_read = 0;
+	uint32_t sample = 0;
+
+	// Allocate a block of data
+	data = std::vector<float>(n_values);
+
+
+	auto header_end = header_size;
+	auto nread = header["nsamples"].val.i * header["nifs"].val.i * header["nchans"].val.i;
+
+	unsigned int data_size = 0;
+
+	/* decide how to read the data based on the number of bits per sample */
+	switch (header["nbits"].val.i) {
+	case 8: /* read n bytes into character block containing n 1-byte numbers */
+		data_size = sizeof(uint8_t);
+		for (unsigned int i = 0; i < nread; i++)
+		{
+			data[i] = input.substr(header_end + (i * data_size) , data_size)[0];
+		}
+		break;
+
+	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
+		data_size = sizeof(uint16_t);
+
+		for (unsigned int i = 0; i < nread; i++) {
+			// Converts the value (to an unsigned long (uint32_t)
+			data[i] = std::stoul(input.substr(header_end + (i * data_size), data_size), nullptr, 0);
+		}
+
+		break;
+	case 32:
+		data_size = sizeof(float);
+		for (unsigned int i = 0; i < nread; i++){
+			data[i] = std::stof(input.substr(header_end + (i * data_size), data_size), nullptr);
+		}
+
+		break;
+	}
 
 	return true;
 }
@@ -118,24 +160,24 @@ bool filterbank::write_stdio(bool headerless) {
 		std::cout << "HEADER_END";
 	}
 
-	for (uint32_t sample = 0; sample < n_samples; ++sample) {
-		for (uint32_t interface = 0; interface < n_ifs; ++interface) {
+	for (uint32_t sample = 0; sample < header["nsamples"].val.i; ++sample) {
+		for (uint32_t interface = 0; interface < header["nifs"].val.i; ++interface) {
 			// Get the index for the interface
-			int32_t index = (sample * n_ifs * n_channels) + (interface * n_channels);
+			int32_t index = (sample * header["nifs"].val.i * header["nchans"].val.i) + (interface * header["nchans"].val.i);
 			switch (n_bytes) {
 			case 1: {
-				std::vector<uint8_t>cwbuf(n_channels);
-				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
-					cwbuf[channel - start_channel] = (uint8_t)data[((uint64_t)index) + channel];
+				std::vector<uint8_t>cwbuf(header["nchans"].val.i);
+				for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
+					cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
 				}
 				
 				fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), stdout);
 				break;
 			}
 			case 2: {
-				std::vector<uint16_t>swbuf(n_channels);
-				for (uint32_t channel = start_channel; channel < end_channel; channel++) {
-					swbuf[channel - start_channel] = (uint16_t)data[((uint64_t)index) + channel];
+				std::vector<uint16_t>swbuf(header["nchans"].val.i);
+				for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
+					swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
 				}
 
 				fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), stdout);
