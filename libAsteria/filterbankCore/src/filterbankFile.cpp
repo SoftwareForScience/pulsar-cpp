@@ -8,7 +8,7 @@ filterbank filterbank::read_file(std::string filename) {
 		std::cerr << "Failed to read from file \n";
 	}
 
-	if (fb.read_header_file(inf)) {
+	if (!fb.read_header_file(inf)) {
 		throw "Invalid filterbank file";
 	}
 
@@ -39,24 +39,22 @@ bool filterbank::read_data_file(FILE* fp) {
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (header["nbits"].val.i) {
-	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), fp);
-		for (uint32_t i = 0; i < nread; i++) {
-			data[i] = (float)charblock[i];
+		case 8: /* read n bytes into character block containing n 1-byte numbers */
+			samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), fp);
+			for (uint32_t i = 0; i < nread; i++) {
+				data[i] = (float)charblock[i];
+			}
+			break;
+		case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
+			samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), fp);
+			for (uint32_t i = 0; i < samples_read; i++) {
+				data[i] = (float)shortblock[i];
+			}
+			break;
+		case 32:
+			samples_read = fread(&data[0], sizeof(float), nread, fp);
+			break;
 		}
-		break;
-
-	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), fp);
-		for (uint32_t i = 0; i < samples_read; i++) {
-			data[i] = (float)shortblock[i];
-		}
-		break;
-	case 32:
-		samples_read = fread(&data[0], sizeof(float), nread, fp);
-		break;
-	}
-	
 	return true;
 }
 
@@ -70,8 +68,7 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 
 	if (!headerless) {
 		write_string(fp, "HEADER_START");
-		for (auto param : header)
-		{
+		for (auto param : header) {
 			//Skip unused headers
 			if (param.second.val.d == 0.0) {
 				continue;
@@ -100,28 +97,28 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 			// Get the index for the interface
 			unsigned int index = (sample * header["nifs"].val.i * header["nchans"].val.i) + (interface * header["nchans"].val.i);
 			switch (n_bytes) {
-			case 1: {
-				std::vector<uint8_t>cwbuf(header["nchans"].val.i);
-				for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
-					cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
-				}
+				case 1: {
+					std::vector<uint8_t>cwbuf(header["nchans"].val.i);
+					for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
+						cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
+					}
 
-				fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), fp);
-				break;
-			}
-			case 2: {
-				std::vector<uint16_t>swbuf(header["nchans"].val.i);
-				for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
-					swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
+					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), fp);
+					break;
 				}
+				case 2: {
+					std::vector<uint16_t>swbuf(header["nchans"].val.i);
+					for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
+						swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
+					}
 
-				fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), fp);
-				break;
-			}
-			case 4: {
-				fwrite(&data[index], sizeof(uint32_t), data.size(), fp);
-				break;
-			}
+					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), fp);
+					break;
+				}
+				case 4: {
+					fwrite(&data[index], sizeof(uint32_t), data.size(), fp);
+					break;
+				}
 			}
 		}
 	}
@@ -141,7 +138,6 @@ bool filterbank::read_header_file(FILE* fp) {
 		std::cerr << "Error, File is not a valid filterbank file";
 		return false;
 	}
-
 	while (true) {
 		buffer = read_string(fp, keylen);
 		const std::string token(buffer);
@@ -150,22 +146,21 @@ bool filterbank::read_header_file(FILE* fp) {
 			header_size = ftell(fp);
 			break;
 		}
-
 		switch (header[token].type) {
-		case INT: {
-			header[token].val.i = read_value<int>(fp);
-			break;
-		}
-		case DOUBLE: {
-			header[token].val.d = read_value<double>(fp);
-			break;
-		}
-		case STRING: {
-			auto value = read_string(fp, keylen);
-			//TODO: Error handling
-			strncpy(header[token].val.s, value, keylen);
-			break;
-		}
+			case INT: {
+				header[token].val.i = read_value<int>(fp);
+				break;
+			}
+			case DOUBLE: {
+				header[token].val.d = read_value<double>(fp);
+				break;
+			}
+			case STRING: {
+				auto value = read_string(fp, keylen);
+				//TODO: Error handling
+				strncpy(header[token].val.s, value, keylen);
+				break;
+			}
 		};
 
 	}
@@ -186,7 +181,6 @@ bool filterbank::read_header_file(FILE* fp) {
 	}
 
 	n_values = header["nifs"].val.i * header["nchans"].val.i * header["nsamples"].val.i;
-
 	return true;
 }
 
@@ -199,7 +193,7 @@ uint32_t filterbank::read_key_size(FILE* fp) {
 char* filterbank::read_string(FILE* fp, uint32_t& keylen) {
 	fread(&keylen, sizeof(uint32_t), 1, fp);
 	char* buffer = new char[(((uint64_t)keylen) + 1)]{ '\0' };
-	std::fread(buffer, sizeof(char), keylen, fp);
+	fread(buffer, sizeof(char), keylen, fp);
 	return buffer;
 }
 

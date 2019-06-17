@@ -4,12 +4,10 @@ int main(int argc, char* argv[]) {
 	filterbank fb;
 	CommandLineOptions opts;
 	legacy_arguments(argc, argv, opts);
-
 	CommandLineOptions::statusReturn_e argumentStatus = opts.parse(argc, argv);
 	if (argumentStatus == CommandLineOptions::OPTS_SUCCESS) {
 		//Casting int to enum filterbank::inputType
 		fb = filterbank::read((filterbank::ioType)opts.getInputType(), opts.getInputFile());
-
 		if (opts.getNumberOfBits()) {
 			fb.header["nbits"].val.i = opts.getNumberOfBits();
 		}
@@ -21,7 +19,6 @@ int main(int argc, char* argv[]) {
 			decimate_samples(fb, opts.getNumberOfSamples());
 		}
 		decimate_channels(fb, opts.getNumberOfChannels());
-
 		fb.write((filterbank::ioType)opts.getOutputType(), opts.getOutputFile(), opts.getHeaderlessFlag());
 	}
 	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {

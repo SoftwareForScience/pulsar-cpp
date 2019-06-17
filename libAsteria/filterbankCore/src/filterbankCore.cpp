@@ -18,26 +18,31 @@ std::map<uint16_t, std::string> filterbank::machine_ids = {
 };
 
 
-filterbank filterbank::read(filterbank::ioType inType,
-							std::string input) {
+filterbank filterbank::read(filterbank::ioType inType, std::string input) {
 
 	filterbank fb;
 	switch (inType) {
-	case ioType::STDIO:
-		fb = read_stdio(input);
-
-	case ioType::FILEIO:
-		fb = read_file(input);	
-	}
+		case ioType::STDIO:
+			fb = read_stdio(input);
+			break;
+		case ioType::FILEIO:
+			fb = read_file(input);
+			break;
+		}
+	return fb;
 }
 
-void filterbank::write(filterbank::ioType outType,std::string filename, bool headerless) {
+void filterbank::write(filterbank::ioType outType, std::string filename, bool headerless) {
 	//TODO: Error handling on IO
 	switch (outType) {
-	case ioType::STDIO:
-		write_stdio(headerless);
-	case ioType::FILEIO:
-		write_file(filename, headerless);
+		case ioType::STDIO: {
+			write_stdio(headerless);
+			break;
+		}
+		case ioType::FILEIO: {
+			write_file(filename, headerless);
+			break;
+		}
 	}
 }
 

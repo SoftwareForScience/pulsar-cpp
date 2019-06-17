@@ -27,7 +27,7 @@ public:
 
 
 	static filterbank read(filterbank::ioType inputType, std::string input = "");
-		void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
+	void write(filterbank::ioType outputType, std::string filename = "", bool headerless = false);
 
 	std::map<std::string, header_param> header
 	{

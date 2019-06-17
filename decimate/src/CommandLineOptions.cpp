@@ -50,8 +50,15 @@ CommandLineOptions::statusReturn_e CommandLineOptions::parse(int argc, char* arg
         }
         if (vm.count("filename")) {
             inputType = 1;
+        } else {
+		    char c;
+            while (std::cin.good())
+            {
+                c = std::cin.get();
+                myInputFile += c;
+            }
         }
-        if (vm.count("--o")) {
+        if (vm.count("-o")) {
             outputType = 1;
         }
 

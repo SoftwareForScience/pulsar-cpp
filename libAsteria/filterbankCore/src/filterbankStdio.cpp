@@ -1,9 +1,26 @@
 #include "filterbankCore.hpp"
 
+uint32_t get_keylength(std::string buffer) {
+	return (uint32_t)buffer[0] |
+			(uint32_t)buffer[1] << 8 |
+			(uint32_t)buffer[2] << 16 |
+			(uint32_t)buffer[3] << 24;
+}
+
+double get_double(std::string buffer) {
+	return (uint64_t)buffer[0] |
+			(uint64_t)buffer[1] << 8 |
+			(uint64_t)buffer[2] << 16 |
+			(uint64_t)buffer[3] << 24 |
+			(uint64_t)buffer[4] << 32 |
+			(uint64_t)buffer[5] << 40 |
+			(uint64_t)buffer[6] << 48 |
+			(uint64_t)buffer[7] << 56;
+}
+
 filterbank filterbank::read_stdio(std::string input) {
 	auto fb = filterbank();
-
-	if (input.compare("")) {
+	if (!input.compare("")) {
 		std::cerr << "No valid input given";
 		return fb;
 	}
@@ -15,8 +32,11 @@ filterbank filterbank::read_stdio(std::string input) {
 
 bool filterbank::read_header_stdio(std::string input) {
 	unsigned int index = 0;
+	unsigned int data_size = 0;
 	// read key length from string
-	uint32_t keylen = std::stoul(input.substr(index, sizeof(uint32_t)), nullptr, 0);
+	std::string buffer = input.substr(index, sizeof(uint32_t));
+	uint32_t keylen = get_keylength(buffer);
+
 	// move the "file pointer"
 	index += sizeof(keylen);
 	// Read the string
@@ -30,15 +50,13 @@ bool filterbank::read_header_stdio(std::string input) {
 		std::cerr << "Error, File is not a valid filterbank file";
 		return false;
 	}
-
 	while (true) {
 		//Get size of token
-		keylen = std::stoul(input.substr(index, sizeof(uint32_t)), nullptr, 0);
+		buffer = input.substr(index, sizeof(uint32_t));
+		uint32_t keylen = get_keylength(buffer);
 		index += sizeof(keylen);
-
 		std::string token = input.substr(index, keylen);
 		index += keylen;
-			
 		if (!token.compare("HEADER_END")) {
 			// get size of the header by getting the current position;
 			header_size = index;
@@ -46,31 +64,33 @@ bool filterbank::read_header_stdio(std::string input) {
 		}
 
 		switch (header[token].type) {
-		case INT: {
-			header[token].val.i = std::stol(input.substr(index, sizeof(uint32_t)), nullptr,0);
-			index += sizeof(uint32_t);
-			break;
-		}
-		case DOUBLE: {
-			header[token].val.d = std::stod(input.substr(index, sizeof(double)), nullptr);
-			index += sizeof(double);
-			break;
-		}
-		case STRING: {
-			// Get size of string
-			uint32_t valLen = std::stoul(input.substr(index, sizeof(uint32_t)), nullptr, 0);
-			index += sizeof(valLen);
-
-			// Get value of string
-			auto value = input.substr(index, valLen);
-			strncpy(header[token].val.s, value.c_str(), valLen);
-			break;
-		}
+			case INT: {
+				data_size = sizeof(uint32_t);
+				header[token].val.i = get_keylength(input.substr(index, data_size));
+				index += data_size;
+				break;
+			}
+			case DOUBLE: {
+				data_size = sizeof(double);
+				header[token].val.d = get_double(input.substr(index, data_size));
+				index += data_size;
+				break;
+			}
+			case STRING: {
+				// Get size of string
+				data_size = sizeof(uint32_t);
+				uint32_t valLen = get_keylength(input.substr(index, data_size));
+				index += data_size;
+				// Get value of string
+				auto value = input.substr(index, valLen);
+				strncpy(header[token].val.s, value.c_str(), valLen);
+				index += valLen;
+				break;
+			}
 		};
-
 	}
 	file_size = sizeof(input);
-	data_size = file_size - header_size;
+	int total_data_size = file_size - header_size;
 
 	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
@@ -103,32 +123,30 @@ bool filterbank::read_data_stdio(std::string input) {
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (header["nbits"].val.i) {
-	case 8: /* read n bytes into character block containing n 1-byte numbers */
-		data_size = sizeof(uint8_t);
-		for (unsigned int i = 0; i < nread; i++)
-		{
-			data[i] = input.substr(header_end + (i * data_size) , data_size)[0];
+		case 8: { /* read n bytes into character block containing n 1-byte numbers */
+			data_size = sizeof(uint8_t);
+			for (unsigned int i = 0; i < nread; i++) {
+				data[i] = input.substr(header_end + (i * data_size) , data_size)[0];
+				std::cout << data[i];
+			}
+			break;
 		}
-		break;
-
-	case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-		data_size = sizeof(uint16_t);
-
-		for (unsigned int i = 0; i < nread; i++) {
-			// Converts the value (to an unsigned long (uint32_t)
-			data[i] = std::stoul(input.substr(header_end + (i * data_size), data_size), nullptr, 0);
+		case 16: { /* read 2*n bytes into short block containing n 2-byte numbers */
+			data_size = sizeof(uint16_t);
+			for (unsigned int i = 0; i < nread; i++) {
+				// Converts the value (to an unsigned long (uint32_t)
+				data[i] = std::stoul(input.substr(header_end + (i * data_size), data_size), nullptr, 0);
+			}
+			break;
 		}
-
-		break;
-	case 32:
-		data_size = sizeof(float);
-		for (unsigned int i = 0; i < nread; i++){
-			data[i] = std::stof(input.substr(header_end + (i * data_size), data_size), nullptr);
+		case 32: {
+			data_size = sizeof(float);
+			for (unsigned int i = 0; i < nread; i++){
+				data[i] = std::stof(input.substr(header_end + (i * data_size), data_size), nullptr);
+			}
+			break;
 		}
-
-		break;
 	}
-
 	return true;
 }
 
@@ -136,25 +154,24 @@ bool filterbank::read_data_stdio(std::string input) {
 bool filterbank::write_stdio(bool headerless) {
 	if (!headerless) {
 		std::cout << "HEADER_START";
-		for (auto param : header)
-		{
+		for (auto param : header) {
 			//Skip unused headers
 			if (param.second.val.d == 0.0) {
 				continue;
 			}
 			switch (param.second.type) {
-			case INT: {
-				std::cout << param.first << param.second.val.i;
-				break;
-			}
-			case DOUBLE: {
-				std::cout << param.first << param.second.val.d;
-				break;
-			}
-			case STRING: {
-				std::cout << param.first << param.second.val.s;
-				break;
-			}
+				case INT: {
+					std::cout << param.first << param.second.val.i;
+					break;
+				}
+				case DOUBLE: {
+					std::cout << param.first << param.second.val.d;
+					break;
+				}
+				case STRING: {
+					std::cout << param.first << param.second.val.s;
+					break;
+				}
 			}
 		}
 		std::cout << "HEADER_END";
@@ -165,29 +182,26 @@ bool filterbank::write_stdio(bool headerless) {
 			// Get the index for the interface
 			int32_t index = (sample * header["nifs"].val.i * header["nchans"].val.i) + (interface * header["nchans"].val.i);
 			switch (n_bytes) {
-			case 1: {
-				std::vector<uint8_t>cwbuf(header["nchans"].val.i);
-				for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
-					cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
+				case 1: {
+					std::vector<uint8_t>cwbuf(header["nchans"].val.i);
+					for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
+						cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
+					}
+					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), stdout);
+					break;
 				}
-				
-				fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), stdout);
-				break;
-			}
-			case 2: {
-				std::vector<uint16_t>swbuf(header["nchans"].val.i);
-				for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
-					swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
+				case 2: {
+					std::vector<uint16_t>swbuf(header["nchans"].val.i);
+					for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
+						swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
+					}
+					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), stdout);
+					break;
 				}
-
-				fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), stdout);
-
-				break;
-			}
-			case 4: {
-				fwrite(&data[index], sizeof(uint32_t), data.size(), stdout);
-				break;
-			}
+				case 4: {
+					fwrite(&data[index], sizeof(uint32_t), data.size(), stdout);
+					break;
+				}
 			}
 		}
 	}
