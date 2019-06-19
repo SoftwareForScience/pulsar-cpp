@@ -23,7 +23,7 @@ filterbank filterbank::read(filterbank::ioType inType, std::string input) {
 	filterbank fb;
 	switch (inType) {
 		case ioType::STDIO:
-			fb = read_stdio(input);
+			fb = read_stdio();
 			break;
 		case ioType::FILEIO:
 			fb = read_file(input);

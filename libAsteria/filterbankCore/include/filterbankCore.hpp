@@ -65,7 +65,7 @@ public:
 	std::vector<float> data;
 
 private:
-	static filterbank read_stdio(std::string input);
+	static filterbank read_stdio();
 	bool read_header_stdio(std::string input);
 	bool read_data_stdio(std::string input);
 

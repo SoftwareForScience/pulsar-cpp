@@ -13,8 +13,17 @@ uint32_t get_uint_from_string(std::string buffer, uint32_t data_size = 4) {
 	return out_uint;
 }
 
-filterbank filterbank::read_stdio(std::string input) {
+filterbank filterbank::read_stdio() {
 	auto fb = filterbank();
+
+	char c;
+	std::string input = "";
+	while (std::cin.good())
+	{
+		c = std::cin.get();
+		input += c;
+	}
+
 	if (!input.compare("")) {
 		std::cerr << "No valid input given";
 		return fb;
