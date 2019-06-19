@@ -1,5 +1,11 @@
 #include "dedisperse.h"
 
+/**
+ * corrects for chromatic dispersion in the interstellar medium
+ * 
+ * @param[in] argc the number of arguments provided to the program
+ * @param[in] argv the arguments provided to the program
+ */
 int32_t main(int32_t argc, char* argv[]) {
 	std::vector<std::string> argList(argv, argv + argc);
 	if (argList.size() < 1)
@@ -9,18 +15,28 @@ int32_t main(int32_t argc, char* argv[]) {
 
 	auto fb = filterbank::read(filterbank::ioType::FILEIO, filename);
 
+	float dispersion_measure = 0;
+	double max_delay = 0;
+	int highest_x = 10;
+
+	//if dispresion measure was not set in the program options, find it
+	if (!dispersion_measure) {
+		float pulsar_intensity = find_estimation_intensity(fb, highest_x);
+		dispersion_measure = find_dispersion_measure(fb, pulsar_intensity, max_delay);
+	}
+
 	dedisperse(fb, (double)10, (float)10, 10);
 
 }
 
-
-void dedisperse(filterbank& fb, double max_delay, float dispersion_measure, uint32_t highest_x)
+/**
+ * corrects for chromatic dispersion in the interstellar medium
+ * 
+ * @param[in] fb Filterbank file to dedisperse
+ * @param[in] dispersion_measure the dm to dedisperse at
+ */
+void dedisperse(filterbank& fb, float dispersion_measure)
 {
-	if (!dispersion_measure) {
-		float pulsar_intensity = find_estimation_intensity(fb, 10);
-		dispersion_measure = find_dispersion_measure(fb, pulsar_intensity, max_delay);
-	}
-
 	std::vector<double> delays_per_sample = linspace(dispersion_measure, (float)0, fb.header["nsamples"].val.i);
 
 	float* temp = new float[fb.header["nsamples"].val.i];
@@ -44,6 +60,15 @@ void dedisperse(filterbank& fb, double max_delay, float dispersion_measure, uint
 	}
 }
 
+/**
+ * Attempts to find a pattern in the the data
+ * 
+ * @param[in] fb Filterbank file to find a line in
+ * @param[in] start_sample the sample to start from
+ * @param[in] max_delay Maximum amount of time between pulses
+ * @param[in] pulsar_intensity the intensity from which a pulse is considered a pulsar
+ * @return the start_sample of the pulsar and the estimated dispersion measure
+ */
 std::pair<uint32_t, uint32_t> find_line(filterbank& fb, uint32_t start_sample, double max_delay, float pulsar_intensity)
 {
 	uint32_t previous_index = start_sample;
@@ -60,7 +85,14 @@ std::pair<uint32_t, uint32_t> find_line(filterbank& fb, uint32_t start_sample, d
 	return std::pair<uint32_t, uint32_t>(0, 0);
 }
 
-
+/**
+ * Attempts to find the dispersion measure in a given dataset
+ *  
+ * @param[in] fb Filterbank file to find the dispersion measure from
+ * @param[in] max_delay Maximum amount of time between pulses
+ * @param[in] pulsar_intensity the intensity from which a pulse is considered a pulsar
+ * @return the estimated dispersion measure
+ */
 float find_dispersion_measure(filterbank& fb, float pulsar_intensity, double max_delay)
 {
 	uint32_t start_sample_index = 0;
@@ -83,6 +115,13 @@ float find_dispersion_measure(filterbank& fb, float pulsar_intensity, double max
 	return 0.0f;
 }
 
+/**
+ * Attempts to find the approximate intensity of a pulsar
+ *  
+ * @param[in] fb Filterbank file to find the dispersion measure from
+ * @param[in] highest_x the n_highest values to average 
+ * @return the estimated pulsar intensity
+ */
 float find_estimation_intensity(filterbank& fb, uint32_t highest_x)
 {
 	float sum_intensities = 0.0;

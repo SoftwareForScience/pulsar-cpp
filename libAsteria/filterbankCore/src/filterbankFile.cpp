@@ -1,5 +1,11 @@
 #include "filterbankCore.hpp"
 
+/**
+ * @brief Reads a file
+ * 
+ * @param filename the name of the file to read
+ * @return filterbank the filterbank data object
+ */
 filterbank filterbank::read_file(std::string filename) {
 	auto fb = filterbank();
 	auto inf = fopen(filename.c_str(), "rb");
@@ -18,6 +24,13 @@ filterbank filterbank::read_file(std::string filename) {
 	return fb;
 }
 
+/**
+ * @brief Reads a filterbank object from file
+ * 
+ * @param fp the file pointer
+ * @return true when succesfull
+ * @return false on failure to read the file or incomplete read
+ */
 bool filterbank::read_data_file(FILE* fp) {
 	size_t values_read = 0;
 	uint32_t sample = 0;
@@ -62,7 +75,14 @@ bool filterbank::read_data_file(FILE* fp) {
 	return true;
 }
 
-
+/**
+ * @brief Writes the data from the current filterbank object to a file
+ * 
+ * @param filename The filename
+ * @param headerless whether or not to write the header
+ * @return true on success
+ * @return false on failure
+ */
 bool filterbank::write_file(std::string filename, bool headerless) {
 	auto fp = fopen(filename.c_str(), "wb");
 	if (fp == NULL) {
@@ -71,6 +91,7 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 	}
 
 	if (!headerless) {
+		//Write the actual header
 		write_string(fp, "HEADER_START");
 		for (auto param : header) {
 			//Skip unused headers
@@ -96,12 +117,13 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 		write_string(fp, "HEADER_END");
 	}
 
+	// Begin writing the data 
 	for (uint32_t sample = 0; sample < header["nsamples"].val.i; ++sample) {
 		for (uint32_t interface = 0; interface < header["nifs"].val.i; ++interface) {
 			// Get the index for the interface
 			unsigned int index = (sample * header["nifs"].val.i * header["nchans"].val.i) + (interface * header["nchans"].val.i);
-			switch (n_bytes) {
-				case 1: {
+			switch (header["nbits"].val.i) {
+				case 8: {
 					std::vector<uint8_t>cwbuf(header["nchans"].val.i);
 					for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
 						cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
@@ -110,7 +132,7 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), fp);
 					break;
 				}
-				case 2: {
+				case 16: {
 					std::vector<uint16_t>swbuf(header["nchans"].val.i);
 					for (unsigned int channel = 0; channel < header["nchans"].val.i; channel++) {
 						swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
@@ -119,8 +141,12 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), fp);
 					break;
 				}
-				case 4: {
+				case 32: {
 					fwrite(&data[index], sizeof(uint32_t), data.size(), fp);
+					break;
+				}
+				default:{
+					std::cerr << "Invalid number of output bits: supported formats are 8/16/32 bits";
 					break;
 				}
 			}
@@ -129,6 +155,13 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 	fclose(fp);
 }
 
+/**
+ * @brief Reads the header of a given file
+ * 
+ * @param fp the file pointer
+ * @return true on success
+ * @return false on failure to read the file or if the file is invalid
+ */
 bool filterbank::read_header_file(FILE* fp) {
 	if (fp == NULL) {
 		return false;
@@ -188,12 +221,25 @@ bool filterbank::read_header_file(FILE* fp) {
 	return true;
 }
 
+/**
+ * @brief reads the size of a following string
+ * 
+ * @param fp the file to read from
+ * @return uint32_t the size of the following string
+ */
 uint32_t filterbank::read_key_size(FILE* fp) {
 	uint32_t keylen;
 	fread(&keylen, sizeof(keylen), 1, fp);
 	return keylen;
 }
 
+/**
+ * @brief reads a string from the file
+ * 
+ * @param fp the file to read from
+ * @param keylen the length of the string
+ * @return char* a buffer containing the data
+ */
 char* filterbank::read_string(FILE* fp, uint32_t& keylen) {
 	fread(&keylen, sizeof(uint32_t), 1, fp);
 	char* buffer = new char[(((uint64_t)keylen) + 1)]{ '\0' };
@@ -201,6 +247,13 @@ char* filterbank::read_string(FILE* fp, uint32_t& keylen) {
 	return buffer;
 }
 
+/**
+ * @brief reads a value from the file
+ * 
+ * @tparam T The type of value
+ * @param fp The file to write to
+ * @return T The data read.
+ */
 template <typename T >
 T filterbank::read_value(FILE* fp) {
 	T value;

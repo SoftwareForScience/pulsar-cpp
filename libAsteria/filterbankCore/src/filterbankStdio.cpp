@@ -1,18 +1,23 @@
 #include "filterbankCore.hpp"
 
-//Hacky, needs replacement.
-double get_double_from_string(std::string buffer) {
-	double out_double = 0;
-	memcpy(&out_double, buffer.c_str(), 8);
-	return out_double;
+template <typename T>
+/**
+ * @brief Gets a value from string object
+ * 
+ * @param buffer the string
+ * @return T the value parsed
+ */
+T val_from_string(std::string buffer){
+	T out_value =0;
+	memcpy(&out_value, buffer.c_str(), sizeof(T));
+	return out_value;
 }
 
-uint32_t get_uint_from_string(std::string buffer, uint32_t data_size = 4) {
-	uint32_t out_uint = 0;
-	memcpy(&out_uint, buffer.c_str(), data_size);
-	return out_uint;
-}
-
+/**
+ * @brief Reads a filterbank file from stdio
+ * 
+ * @return filterbank The filterbank file to return
+ */
 filterbank filterbank::read_stdio() {
 	auto fb = filterbank();
 
@@ -34,11 +39,18 @@ filterbank filterbank::read_stdio() {
 	return fb;
 }
 
+/**
+ * @brief Reads the filterbank header from stdio
+ * 
+ * @param input the input string
+ * @return true on success
+ * @return false if the filterbank header is invalid
+ */
 bool filterbank::read_header_stdio(std::string input) {
 	unsigned int index = 0;
 	unsigned int total_data_size = 0;
 	// read key length from string
-	uint32_t keylen = get_uint_from_string(input.substr(index, sizeof(uint32_t)));
+	uint32_t keylen = val_from_string<uint32_t>(input.substr(index, sizeof(uint32_t)));
 
 	// move the "file pointer"
 	index += sizeof(keylen);
@@ -55,7 +67,7 @@ bool filterbank::read_header_stdio(std::string input) {
 	}
 	while (true) {
 		//Get size of token
-		uint32_t keylen = get_uint_from_string(input.substr(index, sizeof(uint32_t)));
+		uint32_t keylen = val_from_string<uint32_t>(input.substr(index, sizeof(uint32_t)));
 		index += sizeof(keylen);
 		std::string token = input.substr(index, keylen);
 		index += keylen;
@@ -69,20 +81,20 @@ bool filterbank::read_header_stdio(std::string input) {
 		switch (header[token].type) {
 			case INT: {
 				data_size = sizeof(uint32_t);
-				header[token].val.i = get_uint_from_string(input.substr(index, data_size));
+				header[token].val.i = val_from_string<uint32_t>(input.substr(index, data_size));
 				index += data_size;
 				break;
 			}
 			case DOUBLE: {
 				data_size = sizeof(double);
-				header[token].val.d = get_double_from_string(input.substr(index, data_size));
+				header[token].val.d = val_from_string<uint32_t>(input.substr(index, data_size));
 				index += data_size;
 				break;
 			}
 			case STRING: {
 				data_size = sizeof(uint32_t);
 				// Get size of string
-				uint32_t valLen = get_uint_from_string(input.substr(index, data_size));
+				uint32_t valLen = val_from_string<uint32_t>(input.substr(index, data_size));
 				index += data_size;
 				// Get value of string
 				auto value = input.substr(index, valLen);
@@ -127,7 +139,7 @@ bool filterbank::read_data_stdio(std::string input) {
 			data_size = sizeof(uint8_t);
 			for (unsigned int i = 0; i < n_values; i++) {
 				buffer = input.substr(header_size + (i * data_size) , data_size);
-				data[i] = get_uint_from_string(buffer, data_size);
+				data[i] = val_from_string<uint32_t>(buffer);
 			}
 			break;
 		}
@@ -136,7 +148,7 @@ bool filterbank::read_data_stdio(std::string input) {
 			for (unsigned int i = 0; i < n_values; i++) {
 				// Converts the value (to an unsigned long (uint32_t)
 				buffer = input.substr(header_size + (i * data_size) , data_size);
-				data[i] = get_uint_from_string(buffer, data_size);
+				data[i] = val_from_string<uint16_t>(buffer);
 			}
 			break;
 		}
@@ -144,7 +156,7 @@ bool filterbank::read_data_stdio(std::string input) {
 			data_size = sizeof(float);
 			for (unsigned int i = 0; i < n_values; i++){
 				buffer = input.substr(header_size + (i * data_size) , data_size);
-				data[i] = get_uint_from_string(buffer, data_size);
+				val_from_string<float>(buffer);		
 			}
 			break;
 		}
@@ -155,6 +167,13 @@ bool filterbank::read_data_stdio(std::string input) {
 	return true;
 }
 
+/**
+ * @brief Writes the data from the current filterbank object to a stdio
+ * 
+ * @param headerless whether or not to write the header
+ * @return true on success
+ * @return false on failure
+ */
 bool filterbank::write_stdio(bool headerless) {
 	if (!headerless) {
 		write_string(stdout, "HEADER_START");
@@ -186,8 +205,8 @@ bool filterbank::write_stdio(bool headerless) {
 		for (uint32_t interface = 0; interface < header["nifs"].val.i; ++interface) {
 			// Get the index for the interface
 			int32_t index = (sample * header["nifs"].val.i * header["nchans"].val.i) + (interface * header["nchans"].val.i);
-			switch (n_bytes) {
-				case 1: {
+			switch (header["nbits"].val.i) {
+				case 8: {
 					std::vector<uint8_t>cwbuf(header["nchans"].val.i);
 					for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
 						cwbuf[channel] = (uint8_t)data[((uint64_t)index) + channel];
@@ -195,7 +214,7 @@ bool filterbank::write_stdio(bool headerless) {
 					fwrite(&cwbuf[0], sizeof(uint8_t), cwbuf.size(), stdout);
 					break;
 				}
-				case 2: {
+				case 16: {
 					std::vector<uint16_t>swbuf(header["nchans"].val.i);
 					for (uint32_t channel = 0; channel < header["nchans"].val.i; channel++) {
 						swbuf[channel] = (uint16_t)data[((uint64_t)index) + channel];
@@ -203,8 +222,12 @@ bool filterbank::write_stdio(bool headerless) {
 					fwrite(&swbuf[0], sizeof(uint16_t), swbuf.size(), stdout);
 					break;
 				}
-				case 4: {
+				case 32: {
 					fwrite(&data[index], sizeof(uint32_t), data.size(), stdout);
+					break;
+				}
+				default:{
+					std::cerr << "Invalid number of output bits: supported formats are 8/16/32 bits";
 					break;
 				}
 			}
