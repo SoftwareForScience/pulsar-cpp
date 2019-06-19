@@ -47,7 +47,7 @@ bool filterbank::read_data_file(FILE* fp) {
 			break;
 		case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
 			samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), fp);
-			for (uint32_t i = 0; i < samples_read; i++) {
+			for (uint32_t i = 0; i < nread; i++) {
 				data[i] = (float)shortblock[i];
 			}
 			break;

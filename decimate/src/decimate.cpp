@@ -43,12 +43,11 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 
 	std::vector<float> temp(n_values_out);
 
-	for (uint32_t sample = 0; sample < fb.header["nsamples"].val.i; sample++){
-		for (uint32_t interface = 0; interface < fb.header["nifs"].val.i; interface++) {
+	for (uint32_t interface = 0; interface < fb.header["nifs"].val.i; interface++) {
+		for (uint32_t sample = 0; sample < fb.header["nsamples"].val.i; sample++){
 			uint32_t channel = 0;
 			while (channel < fb.header["nchans"].val.i) {
 				float total = 0;
-
 				for (uint32_t j = 0; j < n_channels_to_combine; ++j) {
 					int32_t index = (sample * fb.header["nifs"].val.i * fb.header["nchans"].val.i) + (interface * fb.header["nchans"].val.i) + channel;
 					total += fb.data[index];
@@ -78,14 +77,14 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	uint32_t n_values_out = fb.header["nifs"].val.i * fb.header["nchans"].val.i * n_samples_out;
 
 	std::vector<float> temp(n_values_out);
-
-	for (uint32_t channel = 0; channel < fb.header["nchans"].val.i; channel++) {
-		for (uint32_t interface = 0; interface < fb.header["nifs"].val.i; interface++) {
+	
+	for (uint32_t interface = 0; interface < fb.header["nifs"].val.i; interface++) {
+		for (uint32_t channel = 0; channel < fb.header["nchans"].val.i; channel++) {
 			uint32_t sample = 0;
 
 			while (sample < fb.header["nsamples"].val.i) {
 				float total = 0;
-				for (uint32_t j = 0; j <  fb.header["nsamples"].val.i / n_samples_to_combine; ++j) {
+				for (uint32_t j = 0; j < n_samples_to_combine; ++j) {
 					uint32_t index = (sample * fb.header["nifs"].val.i * fb.header["nchans"].val.i) + (interface * fb.header["nchans"].val.i) + channel;
 					total += fb.data[index];
 					sample++;

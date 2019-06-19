@@ -1,21 +1,16 @@
 #include "filterbankCore.hpp"
 
-uint32_t get_keylength(std::string buffer) {
-	return (((uint32_t)buffer[0])&0xff) |
-			(((uint32_t)buffer[1] << 8)&0xff00) |
-			(((uint32_t)buffer[2] << 16)&0xff0000) |
-			(((uint32_t)buffer[3] << 24)&0xff000000);
+//Hacky, needs replacement.
+double get_double_from_string(std::string buffer) {
+	double out_double = 0;
+	memcpy(&out_double, buffer.c_str(), 8);
+	return out_double;
 }
 
-double get_double(std::string buffer) {
-	return (((uint64_t)buffer[0])&0xff) |
-			(((uint64_t)buffer[1] << 8)&0xff00) |
-			(((uint64_t)buffer[2] << 16)&0xff0000) |
-			(((uint64_t)buffer[3] << 24)&0xff000000) |
-			(((uint64_t)buffer[4] << 32)&0xff00000000) |
-			(((uint64_t)buffer[5] << 40)&0xff0000000000) |
-			(((uint64_t)buffer[6] << 48)&0xff000000000000) |
-			(((uint64_t)buffer[7] << 56)&0xff00000000000000);
+uint32_t get_uint_from_string(std::string buffer, uint32_t data_size = 4) {
+	uint32_t out_uint = 0;
+	memcpy(&out_uint, buffer.c_str(), data_size);
+	return out_uint;
 }
 
 filterbank filterbank::read_stdio(std::string input) {
@@ -32,10 +27,9 @@ filterbank filterbank::read_stdio(std::string input) {
 
 bool filterbank::read_header_stdio(std::string input) {
 	unsigned int index = 0;
-	unsigned int data_size = 0;
+	unsigned int total_data_size = 0;
 	// read key length from string
-	std::string buffer = input.substr(index, sizeof(uint32_t));
-	uint32_t keylen = get_keylength(buffer);
+	uint32_t keylen = get_uint_from_string(input.substr(index, sizeof(uint32_t)));
 
 	// move the "file pointer"
 	index += sizeof(keylen);
@@ -52,8 +46,7 @@ bool filterbank::read_header_stdio(std::string input) {
 	}
 	while (true) {
 		//Get size of token
-		buffer = input.substr(index, sizeof(uint32_t));
-		uint32_t keylen = get_keylength(buffer);
+		uint32_t keylen = get_uint_from_string(input.substr(index, sizeof(uint32_t)));
 		index += sizeof(keylen);
 		std::string token = input.substr(index, keylen);
 		index += keylen;
@@ -63,23 +56,24 @@ bool filterbank::read_header_stdio(std::string input) {
 			break;
 		}
 
+		unsigned int data_size = 0;
 		switch (header[token].type) {
 			case INT: {
 				data_size = sizeof(uint32_t);
-				header[token].val.i = get_keylength(input.substr(index, data_size));
+				header[token].val.i = get_uint_from_string(input.substr(index, data_size));
 				index += data_size;
 				break;
 			}
 			case DOUBLE: {
 				data_size = sizeof(double);
-				header[token].val.d = get_double(input.substr(index, data_size));
+				header[token].val.d = get_double_from_string(input.substr(index, data_size));
 				index += data_size;
 				break;
 			}
 			case STRING: {
-				// Get size of string
 				data_size = sizeof(uint32_t);
-				uint32_t valLen = get_keylength(input.substr(index, data_size));
+				// Get size of string
+				uint32_t valLen = get_uint_from_string(input.substr(index, data_size));
 				index += data_size;
 				// Get value of string
 				auto value = input.substr(index, valLen);
@@ -90,7 +84,7 @@ bool filterbank::read_header_stdio(std::string input) {
 		}
 	}
 	file_size = input.size();
-	int total_data_size = file_size - header_size;
+	total_data_size = file_size - header_size;
 
 	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
 	n_bytes = header["nbits"].val.i / 8;
@@ -117,6 +111,7 @@ bool filterbank::read_data_stdio(std::string input) {
 
 	auto nread = header["nsamples"].val.i * header["nifs"].val.i * header["nchans"].val.i;
 
+	std::string buffer;
 	unsigned int data_size = 0;
 
 	/* decide how to read the data based on the number of bits per sample */
@@ -124,7 +119,8 @@ bool filterbank::read_data_stdio(std::string input) {
 		case 8: { /* read n bytes into character block containing n 1-byte numbers */
 			data_size = sizeof(uint8_t);
 			for (unsigned int i = 0; i < nread; i++) {
-				data[i] = input.substr(header_size + (i * data_size) , data_size)[0];
+				buffer = input.substr(header_size + (i * data_size) , data_size);
+				data[i] = get_uint_from_string(buffer, data_size);
 			}
 			break;
 		}
@@ -132,14 +128,16 @@ bool filterbank::read_data_stdio(std::string input) {
 			data_size = sizeof(uint16_t);
 			for (unsigned int i = 0; i < nread; i++) {
 				// Converts the value (to an unsigned long (uint32_t)
-				data[i] = std::stoul(input.substr(header_size + (i * data_size), data_size), nullptr, 0);
+				buffer = input.substr(header_size + (i * data_size) , data_size);
+				data[i] = get_uint_from_string(buffer, data_size);
 			}
 			break;
 		}
 		case 32: {
 			data_size = sizeof(float);
 			for (unsigned int i = 0; i < nread; i++){
-				data[i] = std::stof(input.substr(header_size + (i * data_size), data_size), nullptr);
+				buffer = input.substr(header_size + (i * data_size) , data_size);
+				data[i] = get_uint_from_string(buffer, data_size);
 			}
 			break;
 		}
