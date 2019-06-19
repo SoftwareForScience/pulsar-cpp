@@ -14,20 +14,21 @@ int main(int argc, char* argv[]) {
 
 		if (opts.getNumberOfOutputSamples()) {
 			decimate_samples(fb, (fb.header["nsamples"].val.i / opts.getNumberOfOutputSamples()));
-		}
-		else {
+		} else if (opts.getNumberOfSamples()){
 			decimate_samples(fb, opts.getNumberOfSamples());
+		} else {
+			decimate_samples(fb, fb.header["nsamples"].val.i);
 		}
 		decimate_channels(fb, opts.getNumberOfChannels());
 		fb.write((filterbank::ioType)opts.getOutputType(), opts.getOutputFile(), opts.getHeaderlessFlag());
 	}
 	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
 		//Help printed
-		//Do something else?
+		exit(0);
 	}
 	else {
 		std::cerr << "Something went wrong." << std::endl;
-		//do sOmEtHiNg
+		exit(-1);
 	}
 }
 

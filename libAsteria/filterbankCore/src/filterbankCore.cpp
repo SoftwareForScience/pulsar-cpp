@@ -51,4 +51,11 @@ filterbank::filterbank() {
 	data = std::vector<float>(0);
 }
 
-
+void filterbank::write_string(FILE* fp, const std::string string) {
+	uint32_t len = string.length();
+	//Write the length of our string
+	fwrite(&len, sizeof(int), 1, fp);
+	//then write the actual string
+	fwrite(string.c_str(), sizeof(char), len, fp);
+	fflush(fp);
+}

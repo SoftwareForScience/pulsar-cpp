@@ -1,21 +1,21 @@
 #include "filterbankCore.hpp"
 
 uint32_t get_keylength(std::string buffer) {
-	return (uint32_t)buffer[0] |
-			(uint32_t)buffer[1] << 8 |
-			(uint32_t)buffer[2] << 16 |
-			(uint32_t)buffer[3] << 24;
+	return (((uint32_t)buffer[0])&0xff) |
+			(((uint32_t)buffer[1] << 8)&0xff00) |
+			(((uint32_t)buffer[2] << 16)&0xff0000) |
+			(((uint32_t)buffer[3] << 24)&0xff000000);
 }
 
 double get_double(std::string buffer) {
-	return (uint64_t)buffer[0] |
-			(uint64_t)buffer[1] << 8 |
-			(uint64_t)buffer[2] << 16 |
-			(uint64_t)buffer[3] << 24 |
-			(uint64_t)buffer[4] << 32 |
-			(uint64_t)buffer[5] << 40 |
-			(uint64_t)buffer[6] << 48 |
-			(uint64_t)buffer[7] << 56;
+	return (((uint64_t)buffer[0])&0xff) |
+			(((uint64_t)buffer[1] << 8)&0xff00) |
+			(((uint64_t)buffer[2] << 16)&0xff0000) |
+			(((uint64_t)buffer[3] << 24)&0xff000000) |
+			(((uint64_t)buffer[4] << 32)&0xff00000000) |
+			(((uint64_t)buffer[5] << 40)&0xff0000000000) |
+			(((uint64_t)buffer[6] << 48)&0xff000000000000) |
+			(((uint64_t)buffer[7] << 56)&0xff00000000000000);
 }
 
 filterbank filterbank::read_stdio(std::string input) {
@@ -87,9 +87,9 @@ bool filterbank::read_header_stdio(std::string input) {
 				index += valLen;
 				break;
 			}
-		};
+		}
 	}
-	file_size = sizeof(input);
+	file_size = input.size();
 	int total_data_size = file_size - header_size;
 
 	center_freq = (header["fch1"].val.d + header["nchans"].val.i * header["foff"].val.d / 2.0);
@@ -100,7 +100,7 @@ bool filterbank::read_header_stdio(std::string input) {
 
 	// if nsamples isn't set, get it from the data size
 	if (!header["nsamples"].val.i) {
-		header["nsamples"].val.i = data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
+		header["nsamples"].val.i = total_data_size / (n_bytes * header["nchans"].val.i * header["nifs"].val.i);
 	}
 
 	n_values = header["nifs"].val.i * header["nchans"].val.i * header["nsamples"].val.i;
@@ -115,8 +115,6 @@ bool filterbank::read_data_stdio(std::string input) {
 	// Allocate a block of data
 	data = std::vector<float>(n_values);
 
-
-	auto header_end = header_size;
 	auto nread = header["nsamples"].val.i * header["nifs"].val.i * header["nchans"].val.i;
 
 	unsigned int data_size = 0;
@@ -126,8 +124,7 @@ bool filterbank::read_data_stdio(std::string input) {
 		case 8: { /* read n bytes into character block containing n 1-byte numbers */
 			data_size = sizeof(uint8_t);
 			for (unsigned int i = 0; i < nread; i++) {
-				data[i] = input.substr(header_end + (i * data_size) , data_size)[0];
-				std::cout << data[i];
+				data[i] = input.substr(header_size + (i * data_size) , data_size)[0];
 			}
 			break;
 		}
@@ -135,14 +132,14 @@ bool filterbank::read_data_stdio(std::string input) {
 			data_size = sizeof(uint16_t);
 			for (unsigned int i = 0; i < nread; i++) {
 				// Converts the value (to an unsigned long (uint32_t)
-				data[i] = std::stoul(input.substr(header_end + (i * data_size), data_size), nullptr, 0);
+				data[i] = std::stoul(input.substr(header_size + (i * data_size), data_size), nullptr, 0);
 			}
 			break;
 		}
 		case 32: {
 			data_size = sizeof(float);
 			for (unsigned int i = 0; i < nread; i++){
-				data[i] = std::stof(input.substr(header_end + (i * data_size), data_size), nullptr);
+				data[i] = std::stof(input.substr(header_size + (i * data_size), data_size), nullptr);
 			}
 			break;
 		}
@@ -150,10 +147,9 @@ bool filterbank::read_data_stdio(std::string input) {
 	return true;
 }
 
-
 bool filterbank::write_stdio(bool headerless) {
 	if (!headerless) {
-		std::cout << "HEADER_START";
+		write_string(stdout, "HEADER_START");
 		for (auto param : header) {
 			//Skip unused headers
 			if (param.second.val.d == 0.0) {
@@ -161,20 +157,21 @@ bool filterbank::write_stdio(bool headerless) {
 			}
 			switch (param.second.type) {
 				case INT: {
-					std::cout << param.first << param.second.val.i;
+					write_value(stdout, param.first, param.second.val.i);
 					break;
 				}
 				case DOUBLE: {
-					std::cout << param.first << param.second.val.d;
+					write_value(stdout, param.first, param.second.val.d);
 					break;
 				}
 				case STRING: {
-					std::cout << param.first << param.second.val.s;
+					write_string(stdout, param.first);
+					write_string(stdout, param.second.val.s);
 					break;
 				}
 			}
 		}
-		std::cout << "HEADER_END";
+		write_string(stdout, "HEADER_END");
 	}
 
 	for (uint32_t sample = 0; sample < header["nsamples"].val.i; ++sample) {

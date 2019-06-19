@@ -86,18 +86,22 @@ private:
 	static std::map<uint16_t, std::string> telescope_ids;
 	static std::map<uint16_t, std::string> machine_ids;
 
-
-	
 	uint32_t read_key_size(FILE* fp);
 	uint32_t read_data(FILE* fp);
+	
+	char* read_string(FILE* fp, uint32_t& keylen);
+	void write_string(FILE* fp, std::string string);
 
 	template <typename T>
 	T read_value(FILE* fp);
-	template <typename T>
-	void write_value(FILE* fp, std::string key, T value);
 
-	char* read_string(FILE* fp, uint32_t& keylen);
-	void write_string(FILE* fp, std::string string);
+	template <typename T>
+	void write_value(FILE* fp, const std::string key, T value) {
+		write_string(fp, key);
+		fwrite(&value, sizeof(T), 1, fp);
+		fflush(fp);
+	};
+
 };
 
 #endif // !FILTERBANK_H

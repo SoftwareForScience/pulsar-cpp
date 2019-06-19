@@ -197,15 +197,6 @@ char* filterbank::read_string(FILE* fp, uint32_t& keylen) {
 	return buffer;
 }
 
-void filterbank::write_string(FILE* fp, const std::string string) {
-	uint32_t len = string.length();
-	//Write the length of our string
-	fwrite(&len, sizeof(int), 1, fp);
-	//then write the actual string
-	fwrite(string.c_str(), sizeof(char), len, fp);
-	fflush(fp);
-}
-
 template <typename T >
 T filterbank::read_value(FILE* fp) {
 	T value;
@@ -213,11 +204,5 @@ T filterbank::read_value(FILE* fp) {
 	return value;
 }
 
-template <typename T>
-void filterbank::write_value(FILE* fp, const std::string key, T value) {
-	write_string(fp, key);
-	fwrite(&value, sizeof(T), 1, fp);
-	fflush(fp);
-}
 
 
