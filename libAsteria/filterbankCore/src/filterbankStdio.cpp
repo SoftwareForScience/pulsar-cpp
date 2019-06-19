@@ -103,13 +103,11 @@ bool filterbank::read_header_stdio(std::string input) {
 }
 
 bool filterbank::read_data_stdio(std::string input) {
-	size_t samples_read = 0;
+	size_t values_read = 0;
 	uint32_t sample = 0;
 
 	// Allocate a block of data
 	data = std::vector<float>(n_values);
-
-	auto nread = header["nsamples"].val.i * header["nifs"].val.i * header["nchans"].val.i;
 
 	std::string buffer;
 	unsigned int data_size = 0;
@@ -118,7 +116,7 @@ bool filterbank::read_data_stdio(std::string input) {
 	switch (header["nbits"].val.i) {
 		case 8: { /* read n bytes into character block containing n 1-byte numbers */
 			data_size = sizeof(uint8_t);
-			for (unsigned int i = 0; i < nread; i++) {
+			for (unsigned int i = 0; i < n_values; i++) {
 				buffer = input.substr(header_size + (i * data_size) , data_size);
 				data[i] = get_uint_from_string(buffer, data_size);
 			}
@@ -126,7 +124,7 @@ bool filterbank::read_data_stdio(std::string input) {
 		}
 		case 16: { /* read 2*n bytes into short block containing n 2-byte numbers */
 			data_size = sizeof(uint16_t);
-			for (unsigned int i = 0; i < nread; i++) {
+			for (unsigned int i = 0; i < n_values; i++) {
 				// Converts the value (to an unsigned long (uint32_t)
 				buffer = input.substr(header_size + (i * data_size) , data_size);
 				data[i] = get_uint_from_string(buffer, data_size);
@@ -135,12 +133,15 @@ bool filterbank::read_data_stdio(std::string input) {
 		}
 		case 32: {
 			data_size = sizeof(float);
-			for (unsigned int i = 0; i < nread; i++){
+			for (unsigned int i = 0; i < n_values; i++){
 				buffer = input.substr(header_size + (i * data_size) , data_size);
 				data[i] = get_uint_from_string(buffer, data_size);
 			}
 			break;
 		}
+	}
+	if (values_read != n_values) {
+		return false;
 	}
 	return true;
 }

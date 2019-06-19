@@ -19,7 +19,7 @@ filterbank filterbank::read_file(std::string filename) {
 }
 
 bool filterbank::read_data_file(FILE* fp) {
-	size_t samples_read = 0;
+	size_t values_read = 0;
 	uint32_t sample = 0;
 
 	if (fp == NULL) {
@@ -32,29 +32,33 @@ bool filterbank::read_data_file(FILE* fp) {
 	// Skip the header
 	fseek(fp, header_size, SEEK_SET);
 
-	auto nread = header["nsamples"].val.i * header["nifs"].val.i * header["nchans"].val.i;
-
-	std::vector<uint8_t> charblock(nread);
-	std::vector<uint16_t> shortblock(nread);
+	std::vector<uint8_t> charblock(n_values);
+	std::vector<uint16_t> shortblock(n_values);
 
 	/* decide how to read the data based on the number of bits per sample */
 	switch (header["nbits"].val.i) {
-		case 8: /* read n bytes into character block containing n 1-byte numbers */
-			samples_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), fp);
-			for (uint32_t i = 0; i < nread; i++) {
+		case 8: { /* read n bytes into character block containing n 1-byte numbers */
+			values_read = fread(&charblock[0], sizeof(uint8_t), charblock.size(), fp);
+			for (uint32_t i = 0; i < n_values; i++) {
 				data[i] = (float)charblock[i];
 			}
 			break;
-		case 16: /* read 2*n bytes into short block containing n 2-byte numbers */
-			samples_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), fp);
-			for (uint32_t i = 0; i < nread; i++) {
+		}
+		case 16: { /* read 2*n bytes into short block containing n 2-byte numbers */
+			values_read = fread(&shortblock[0], sizeof(uint16_t), shortblock.size(), fp);
+			for (uint32_t i = 0; i < n_values; i++) {
 				data[i] = (float)shortblock[i];
 			}
 			break;
-		case 32:
-			samples_read = fread(&data[0], sizeof(float), nread, fp);
+		}
+		case 32: {
+			values_read = fread(&data[0], sizeof(float), n_values, fp);
 			break;
 		}
+	}
+	if (values_read != n_values) {
+		return false;
+	}
 	return true;
 }
 
