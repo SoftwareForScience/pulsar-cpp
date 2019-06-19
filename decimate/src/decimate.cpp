@@ -1,5 +1,12 @@
 #include "decimate.h"
 
+/**
+ * reduces the amount of data by combining measurements from multiple samples 
+ * and/or channels.
+ * 
+ * @param[in] argc the number of arguments provided to the program
+ * @param[in] argv the arguments provided to the program
+ */
 int main(int argc, char* argv[]) {
 	filterbank fb;
 	CommandLineOptions opts;
@@ -32,6 +39,12 @@ int main(int argc, char* argv[]) {
 	}
 }
 
+/**
+ * reduces the amount of data by combining measurements from multiple frequency channels
+ * 
+ * @param[in] fb Filterbank file to decimate
+ * @param[in] n_channels_to_combine number of channels to combine into one measurement
+ */
 void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 	if (n_channels_to_combine < 1 || fb.header["nchans"].val.i % n_channels_to_combine) {
 		std::cerr << "File does not contain a multiple of: " << n_channels_to_combine << " channels.\n";
@@ -67,6 +80,12 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
 	fb.data = temp;
 }
 
+/**
+ * reduces the amount of data by combining measurements from multiple samples
+ * 
+ * @param[in] fb Filterbank file to decimate
+ * @param[in] n_samples_to_combine number of samples to combine into one measurement
+ */
 void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	if (n_samples_to_combine < 1 || fb.header["nsamples"].val.i % n_samples_to_combine) {
 		std::cerr << "File does not contain a multiple of: " << n_samples_to_combine << " samples.\n";
@@ -107,8 +126,15 @@ void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
 	fb.data = temp;
 }
 
+/**
+ * Changes the -headerless parameter in the input arguments to --headerless
+ * to allow boost programoptions to read the file
+ * 
+ * @param[in] argc the number of arguments provided to the program
+ * @param[in] argv the arguments provided to the program
+ * @param[in] opts a reference to the program options for this program
+ */
 void legacy_arguments(int argc, char* argv[], CommandLineOptions& opts) {
-	//BEGIN LEGACY
 	//-headerless is not a valid switch, changing it to --headerless.
 	int count = 0;
 	std::vector<std::string> arguments(argv, argv + argc);
@@ -120,5 +146,4 @@ void legacy_arguments(int argc, char* argv[], CommandLineOptions& opts) {
 		}
 		count++;
 	}
-	//ENDLEGACY
 }
