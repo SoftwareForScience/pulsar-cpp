@@ -117,7 +117,7 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 		write_string(fp, "HEADER_END");
 	}
 
-	// Begin writing the data 
+	// Begin writing the data
 	for (uint32_t sample = 0; sample < header["nsamples"].val.i; ++sample) {
 		for (uint32_t interface = 0; interface < header["nifs"].val.i; ++interface) {
 			// Get the index for the interface
@@ -142,7 +142,7 @@ bool filterbank::write_file(std::string filename, bool headerless) {
 					break;
 				}
 				case 32: {
-					fwrite(&data[index], sizeof(uint32_t), data.size(), fp);
+					fwrite(&data[index], sizeof(uint32_t), data.size() / header["nsamples"].val.i, fp);
 					break;
 				}
 				default:{

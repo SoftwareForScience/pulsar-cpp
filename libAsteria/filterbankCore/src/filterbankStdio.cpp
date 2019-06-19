@@ -8,9 +8,9 @@ template <typename T>
  * @return T the value parsed
  */
 T val_from_string(std::string buffer){
-	T out_value =0;
-	memcpy(&out_value, buffer.c_str(), sizeof(T));
-	return out_value;
+	T value = 0;
+	memcpy(&value, buffer.c_str(), sizeof(T));
+	return value;
 }
 
 /**
@@ -87,7 +87,7 @@ bool filterbank::read_header_stdio(std::string input) {
 			}
 			case DOUBLE: {
 				data_size = sizeof(double);
-				header[token].val.d = val_from_string<uint32_t>(input.substr(index, data_size));
+				header[token].val.d = val_from_string<double>(input.substr(index, data_size));
 				index += data_size;
 				break;
 			}
@@ -156,7 +156,7 @@ bool filterbank::read_data_stdio(std::string input) {
 			data_size = sizeof(float);
 			for (unsigned int i = 0; i < n_values; i++){
 				buffer = input.substr(header_size + (i * data_size) , data_size);
-				val_from_string<float>(buffer);		
+				data[i] = val_from_string<float>(buffer);
 			}
 			break;
 		}
@@ -223,7 +223,7 @@ bool filterbank::write_stdio(bool headerless) {
 					break;
 				}
 				case 32: {
-					fwrite(&data[index], sizeof(uint32_t), data.size(), stdout);
+					fwrite(&data[index], sizeof(uint32_t), data.size() / header["nsamples"].val.i, stdout);
 					break;
 				}
 				default:{

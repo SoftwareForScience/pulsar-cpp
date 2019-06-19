@@ -35,8 +35,7 @@ int32_t main(int32_t argc, char* argv[]) {
  * @param[in] fb Filterbank file to dedisperse
  * @param[in] dispersion_measure the dm to dedisperse at
  */
-void dedisperse(filterbank& fb, float dispersion_measure)
-{
+void dedisperse(filterbank& fb,  double max_delay, float dispersion_measure, uint32_t highest_x) {
 	std::vector<double> delays_per_sample = linspace(dispersion_measure, (float)0, fb.header["nsamples"].val.i);
 
 	float* temp = new float[fb.header["nsamples"].val.i];
