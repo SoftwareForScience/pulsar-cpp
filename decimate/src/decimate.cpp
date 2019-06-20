@@ -34,7 +34,6 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 	else {
-		std::cerr << "Something went wrong." << std::endl;
 		exit(-1);
 	}
 }

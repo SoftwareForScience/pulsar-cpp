@@ -4,8 +4,14 @@
 #include <string.h>
 #include <iostream>
 #include <boost/program_options.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace po = boost::program_options;
+
+struct non_negative {
+    uint32_t value;
+};
+void validate(boost::any& v, const std::vector<std::string>& values, non_negative*, int);
 
 class CommandLineOptions {
 public:
@@ -20,10 +26,10 @@ public:
 
     const std::string & getInputFile() const;
     const std::string & getOutputFile() const;
-    int32_t getNumberOfChannels() { return num_chans; };
-    int32_t getNumberOfSamples() { return num_samps; };
-    int32_t getNumberOfOutputSamples() { return num_output_samples; };
-    int32_t getNumberOfBits() { return num_bits; };
+    int32_t getNumberOfChannels() { return num_chans.value; };
+    int32_t getNumberOfSamples() { return num_samps.value; };
+    int32_t getNumberOfOutputSamples() { return num_output_samples.value; };
+    int32_t getNumberOfBits() { return num_bits.value; };
     int getInputType() { return inputType; };
     int getOutputType() { return outputType; };
     bool getHeaderlessFlag() { return myHeaderlessFlag; };
@@ -38,10 +44,10 @@ private:
     std::string myOutputFile;
     int inputType;
     int outputType;
-    int num_chans;
-    int num_samps;
-    int num_output_samples;
-    int num_bits;
+    non_negative num_chans;
+    non_negative num_samps;
+    non_negative num_output_samples;
+    non_negative num_bits;
     bool myHeaderlessFlag;
 };
 

@@ -7,8 +7,8 @@ CommandLineOptions::CommandLineOptions():
     outputType(0),
     myInputFile(),
     myOutputFile(),
-    num_chans(1),
-    num_samps(1),
+    num_chans(),
+    num_samps(),
     num_output_samples(),
     num_bits(),
     myHeaderlessFlag(false)
@@ -23,10 +23,10 @@ usage: decimate {filename} -{options}\n\noptions");
         ("help,h", "produce this help message")
         ("filename", po::value<std::string>(&myInputFile)->value_name("FILE"), "filterbank data file (def=stdin)")
         (",o", po::value<std::string>(&myOutputFile)->value_name("FILE"), "filterbank output file (def=stdout)")
-        (",c", po::value<int>(&num_chans)->value_name("numchans"), "number of channels to add (def=all)")
-        (",t", po::value<int>(&num_samps)->value_name("numsamps"), "number of time samples to add (def=none)")
-        (",T", po::value<int>(&num_output_samples)->value_name("numsamps"), "(alternative to -t) specify number of output timesamples")
-        (",n", po::value<int>(&num_bits)->value_name("numbits"), "specify output number of bits (def=input)")
+        (",c", po::value<non_negative>(&num_chans)->value_name("numchans"), "number of channels to add (def=all)")
+        (",t", po::value<non_negative>(&num_samps)->value_name("numsamps"), "number of time samples to add (def=none)")
+        (",T", po::value<non_negative>(&num_output_samples)->value_name("numsamps"), "(alternative to -t) specify number of output timesamples")
+        (",n", po::value<non_negative>(&num_bits)->value_name("numbits"), "specify output number of bits (def=input)")
         ("headerless", po::bool_switch(&myHeaderlessFlag), "do not broadcast resulting header (def=broadcast)");
 
     myOptions.add(options);
@@ -63,8 +63,19 @@ CommandLineOptions::statusReturn_e CommandLineOptions::parse(int argc, char* arg
         return ERROR_IN_COMMAND_LINE; 
     } catch (const po::error &ex) {
         std::cerr << ex.what() << std::endl;
+        std::cout << myOptions << std::endl;
         return ERROR_IN_COMMAND_LINE; 
     }
 
     return ret;
+}
+
+void validate(boost::any& v, const std::vector<std::string>& values, non_negative*, int) {
+    po::validators::check_first_occurrence(v);
+
+    std::string const& s = po::validators::get_single_string(values);
+    if (s[0] == '-') {
+        throw po::validation_error(po::validation_error::invalid_option_value);
+    }
+    v = boost::any(non_negative { boost::lexical_cast<uint32_t>(s) } );
 }
