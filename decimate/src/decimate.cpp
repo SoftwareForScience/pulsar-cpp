@@ -45,30 +45,30 @@ int main(int argc, char* argv[]) {
  * @param[in] fb Filterbank file to decimate
  * @param[in] n_channels_to_combine number of channels to combine into one measurement
  */
-void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
+void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine) {
 	if (n_channels_to_combine < 1 || fb.header["nchans"].val.i % n_channels_to_combine) {
 		std::cerr << "File does not contain a multiple of: " << n_channels_to_combine << " channels.\n";
 		exit(-3);
 	}
-
-	uint32_t n_channels_out = fb.header["nchans"].val.i / n_channels_to_combine;
-	uint32_t n_values_out = fb.header["nifs"].val.i * n_channels_out * fb.header["nsamples"].val.i;
+	
+	unsigned int n_channels_out = fb.header["nchans"].val.i / n_channels_to_combine;
+	unsigned int  n_values_out = fb.header["nifs"].val.i * n_channels_out * fb.header["nsamples"].val.i;
 
 	std::vector<float> temp(n_values_out);
 
-	for (uint32_t interface = 0; interface < fb.header["nifs"].val.i; interface++) {
-		for (uint32_t sample = 0; sample < fb.header["nsamples"].val.i; sample++){
-			uint32_t channel = 0;
+	for (unsigned int interface = 0; interface < fb.header["nifs"].val.i; interface++) {
+		for (unsigned int sample = 0; sample < fb.header["nsamples"].val.i; sample++){
+			unsigned int channel = 0;
 			while (channel < fb.header["nchans"].val.i) {
 				float total = 0;
-				for (uint32_t j = 0; j < n_channels_to_combine; ++j) {
-					int32_t index = (sample * fb.header["nifs"].val.i * fb.header["nchans"].val.i) + (interface * fb.header["nchans"].val.i) + channel;
+				for (unsigned int j = 0; j < n_channels_to_combine; ++j) {
+					unsigned int index = (sample * fb.header["nifs"].val.i * fb.header["nchans"].val.i) + (interface * fb.header["nchans"].val.i) + channel;
 					total += fb.data[index];
 					channel++;
 				}
 				float avg = total / n_channels_to_combine;
 
-				uint32_t out_index = (sample * fb.header["nifs"].val.i * n_channels_out)
+				unsigned int out_index = (sample * fb.header["nifs"].val.i * n_channels_out)
 					+ (interface * n_channels_out)
 					+ ((channel / n_channels_to_combine) - 1);
 				temp[out_index] = avg;
@@ -86,35 +86,22 @@ void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine) {
  * @param[in] fb Filterbank file to decimate
  * @param[in] n_samples_to_combine number of samples to combine into one measurement
  */
-void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine) {
+void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 	if (n_samples_to_combine < 1 || fb.header["nsamples"].val.i % n_samples_to_combine) {
 		std::cerr << "File does not contain a multiple of: " << n_samples_to_combine << " samples.\n";
 		exit(-3);
 	}
 
-	uint32_t n_samples_out = fb.header["nsamples"].val.i / n_samples_to_combine;
-	uint32_t n_values_out = fb.header["nifs"].val.i * fb.header["nchans"].val.i * n_samples_out;
-
+	unsigned int n_samples_out = fb.header["nsamples"].val.i / n_samples_to_combine;
+	unsigned int n_values_out = fb.header["nifs"].val.i * fb.header["nchans"].val.i * n_samples_out;
 	std::vector<float> temp(n_values_out);
-	
-	for (uint32_t interface = 0; interface < fb.header["nifs"].val.i; interface++) {
-		for (uint32_t channel = 0; channel < fb.header["nchans"].val.i; channel++) {
-			uint32_t sample = 0;
-
-			while (sample < fb.header["nsamples"].val.i) {
-				float total = 0;
-				for (uint32_t j = 0; j < n_samples_to_combine; ++j) {
-					uint32_t index = (sample * fb.header["nifs"].val.i * fb.header["nchans"].val.i) + (interface * fb.header["nchans"].val.i) + channel;
-					total += fb.data[index];
-					sample++;
-				}
-
-				float avg = total / n_samples_to_combine;
-
-				int32_t out_index = (((((sample) / n_samples_to_combine) - 1) * fb.header["nifs"].val.i * fb.header["nchans"].val.i)
-					+ (interface * fb.header["nchans"].val.i)
-					+ channel);
-				temp[out_index] = avg;
+	unsigned int nxc =  fb.header["nifs"].val.i * fb.header["nchans"].val.i ;
+    
+	for(unsigned int sample = 1; sample < n_samples_to_combine; sample++){
+		for(unsigned int interface = 0; interface < fb.header["nifs"].val.i; interface++){
+			unsigned int index = interface * fb.header["nchans"].val.i;;
+			for(unsigned int channel = 0; channel < fb.header["nchans"].val.i; channel ++){
+				temp[index+channel] += fb.data[sample*nxc+index+channel];
 			}
 		}
 	}
