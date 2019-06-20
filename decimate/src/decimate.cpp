@@ -97,11 +97,18 @@ void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 	std::vector<float> temp(n_values_out);
 	unsigned int nxc =  fb.header["nifs"].val.i * fb.header["nchans"].val.i ;
     
-	for(unsigned int sample = 1; sample < n_samples_to_combine; sample++){
+	for(unsigned int sample = 0; sample < fb.header["nsamples"].val.i ; sample++){
 		for(unsigned int interface = 0; interface < fb.header["nifs"].val.i; interface++){
-			unsigned int index = interface * fb.header["nchans"].val.i;;
+			//get the index in the output buffer
+			unsigned int out_index = ((sample/n_samples_to_combine) *  fb.header["nifs"].val.i * fb.header["nchans"].val.i) + interface * fb.header["nchans"].val.i;
 			for(unsigned int channel = 0; channel < fb.header["nchans"].val.i; channel ++){
-				temp[index+channel] += fb.data[sample*nxc+index+channel];
+				for (int i = 0; i < n_samples_to_combine; i++)
+				{
+					//get the index of the input buffer
+					unsigned int index = ((sample + i) *  fb.header["nifs"].val.i * fb.header["nchans"].val.i) + interface * fb.header["nchans"].val.i;
+					temp[out_index+channel] += fb.data[index+channel];
+					sample++;
+				}
 			}
 		}
 	}
