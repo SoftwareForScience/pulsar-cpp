@@ -116,10 +116,11 @@ void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine) {
 				+ (interface * fb.header["nchans"].val.i)
 				+ channel);
 				temp[out_index] = total;
+				std::cout << "total is: " << total; 
+
 			}
 		}
 	}
-
 
 	fb.header["nsamples"].val.i = n_samples_out;
 
