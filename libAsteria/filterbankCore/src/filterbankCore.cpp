@@ -72,7 +72,7 @@ void filterbank::write(filterbank::ioType outType, std::string filename, bool he
 			break;
 		}
 		case ioType::FILEIO: {
-			auto fp = fopen(filename.c_str(), "wb");
+			fp = fopen(filename.c_str(), "wb");
 			break;
 		}
 	}
