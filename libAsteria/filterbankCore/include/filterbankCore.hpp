@@ -73,10 +73,6 @@ private:
 	bool read_header_file(FILE* inf);
 	bool read_data_file(FILE* inf);
 
-	bool write_file(std::string filename, bool headerless);
-	bool write_stdio(bool headerless);
-
-
 	uint32_t n_values = 0;
 	uint32_t n_bytes = 0;
 	uint32_t file_size = 0;

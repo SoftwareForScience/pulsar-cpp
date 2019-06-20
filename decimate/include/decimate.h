@@ -8,7 +8,7 @@
 #include "fileutils.h"
 #include "CommandLineOptions.hpp"
 
-void decimate_samples(filterbank& fb, uint32_t n_samples_to_combine);
-void decimate_channels(filterbank& fb, uint32_t n_channels_to_combine);
+void decimate_samples(filterbank& fb, unsigned int n_samples_to_combine);
+void decimate_channels(filterbank& fb, unsigned int n_channels_to_combine);
 void legacy_arguments(int argc, char* argv[], CommandLineOptions& opts);
 #endif // !DECIMATE_H
