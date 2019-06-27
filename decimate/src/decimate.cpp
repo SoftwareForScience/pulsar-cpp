@@ -8,6 +8,7 @@
  * @param[in] argv the arguments provided to the program
  */
 int main(int argc, char* argv[]) {
+	//TODO: Move some logic to decimate_*** -> null checks, > 1, output samps
 	filterbank fb;
 	CommandLineOptions opts;
 	legacy_arguments(argc, argv, opts);
@@ -20,10 +21,17 @@ int main(int argc, char* argv[]) {
 		}
 		if (opts.getNumberOfOutputSamples()) {
 			decimate_samples(fb, (fb.header["nsamples"].val.i / opts.getNumberOfOutputSamples()));
-		} else if (opts.getNumberOfSamples()){
+		} else if (opts.getNumberOfSamples() > 1){
 			decimate_samples(fb, opts.getNumberOfSamples());
 		}
-		decimate_channels(fb, opts.getNumberOfChannels());
+
+		//If no decimation factor is given all channels will be decimated.
+		if (opts.getNumberOfChannels() > 1) {
+			decimate_channels(fb, opts.getNumberOfChannels());
+		} else if (opts.getNumberOfChannels() == 0) {
+			decimate_channels(fb, fb.header["nchans"].val.i);
+		}
+
 		fb.write((filterbank::ioType)opts.getOutputType(), opts.getOutputFile(), opts.getHeaderlessFlag());
 	}
 	else if (argumentStatus == CommandLineOptions::OPTS_HELP) {
