@@ -18,13 +18,10 @@ int main(int argc, char* argv[]) {
 		if (opts.getNumberOfBits()) {
 			fb.header["nbits"].val.i = opts.getNumberOfBits();
 		}
-
 		if (opts.getNumberOfOutputSamples()) {
 			decimate_samples(fb, (fb.header["nsamples"].val.i / opts.getNumberOfOutputSamples()));
 		} else if (opts.getNumberOfSamples()){
 			decimate_samples(fb, opts.getNumberOfSamples());
-		} else {
-			decimate_samples(fb, fb.header["nsamples"].val.i);
 		}
 		decimate_channels(fb, opts.getNumberOfChannels());
 		fb.write((filterbank::ioType)opts.getOutputType(), opts.getOutputFile(), opts.getHeaderlessFlag());
